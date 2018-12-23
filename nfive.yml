@@ -24,3 +24,6 @@ repositories:
 - name: IgiCore/characters
   type: local
   path: G:\Workspace\plugins\IgiCore\characters
+- name: IgiCore/characters
+  type: local
+  path: G:\Workspace\plugins\IgiCore\characters

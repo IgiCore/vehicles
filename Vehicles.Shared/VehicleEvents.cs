@@ -4,5 +4,6 @@
 	{
 		public const string CreateCar = "igicore:vehicles:create:car";
 		public const string CreateBike = "igicore:vehicles:create:bike";
+		public const string SaveCar = "igicore:vehichles:save:car";
 	}
 }
