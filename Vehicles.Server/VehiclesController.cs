@@ -1,5 +1,4 @@
 using System;
-using System.Data.Entity;
 using System.Linq;
 using IgiCore.Vehicles.Server.Storage;
 using IgiCore.Vehicles.Shared;
@@ -19,9 +18,15 @@ namespace IgiCore.Vehicles.Server
 		public VehiclesController(ILogger logger, IEventManager events, IRpcHandler rpc, IRconManager rcon, Configuration configuration) : base(logger, events, rpc, rcon, configuration)
 		{
 			this.Rpc.Event(VehicleEvents.CreateCar).On<Car>(Create);
+			this.Rpc.Event(VehicleEvents.SaveCar).On<Car>(Save);
 		}
 
-		public static async void Create<T>(IRpcEvent e, T vehicle) where T : class, IVehicle
+		private void SpawnCar(object obj)
+		{
+			
+		}
+
+		public async void Create<T>(IRpcEvent e, T vehicle) where T : class, IVehicle
 		{
 			using (var context = new StorageContext())
 			{
@@ -33,7 +38,7 @@ namespace IgiCore.Vehicles.Server
 		}
 
 
-		public static async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle // Has no ID
+		public async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle // Has no ID
 		{
 			using (var context = new StorageContext())
 			{
@@ -41,14 +46,13 @@ namespace IgiCore.Vehicles.Server
 				if (vehicle.Id == Guid.Empty) return;
 
 				var dbVeh = context.Set<T>()
-					.Include(v => v.Extras)
-					.Include(v => v.Wheels)
-					.Include(v => v.Doors)
-					.Include(v => v.Windows)
-					.Include(v => v.Seats)
-					.Include(v => v.Mods)
+					//.Include(v => v.Extras) // TODO: Including these throws errors when there are values in the tables.
+					//.Include(v => v.Wheels)
+					//.Include(v => v.Doors)
+					//.Include(v => v.Windows)
+					//.Include(v => v.Seats)
+					//.Include(v => v.Mods)
 					.FirstOrDefault(c => c.Id == vehicle.Id);
-
 
 				if (dbVeh == null ||
 				    vehicle.TrackingUserId != dbVeh.TrackingUserId && dbVeh.TrackingUserId != Guid.Empty) return;

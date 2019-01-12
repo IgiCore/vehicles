@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using CitizenFX.Core;
 using IgiCore.Vehicles.Shared.Models;
 using NFive.SDK.Client.Extensions;
-using Vehicle = IgiCore.Vehicles.Shared.Models.Vehicle;
 using VehicleClass = IgiCore.Vehicles.Shared.Models.VehicleClass;
 using VehicleColor = IgiCore.Vehicles.Shared.Models.VehicleColor;
 using VehicleDoor = IgiCore.Vehicles.Shared.Models.VehicleDoor;
@@ -21,22 +19,8 @@ namespace IgiCore.Vehicles.Client.Extensions
 {
 	public static class CitizenVehicleExtensions
 	{
-		public static Car ToCar(this CitizenFX.Core.Vehicle vehicle) => new Car
-		{
-			Id = Guid.Empty,
-			Hash = vehicle.Model.Hash,
-			Handle = vehicle.Handle,
-			Position = vehicle.Position.ToPosition(),
-			Heading = vehicle.Heading,
-			BodyHealth = vehicle.BodyHealth,
-			EngineHealth = vehicle.EngineHealth,
-			DirtLevel = vehicle.DirtLevel,
-			FuelLevel = vehicle.FuelLevel,
-			OilLevel = vehicle.OilLevel,
-			PetrolTankHealth = vehicle.PetrolTankHealth
-		};
 
-		public static async Task<Vehicle> ToVehicle(this CitizenFX.Core.Vehicle vehicle, Guid id = default(Guid))
+		public static T ToVehicle<T>(this CitizenFX.Core.Vehicle vehicle, Guid id = default(Guid)) where T : IVehicle, new()
 		{
 			if (id == default(Guid)) id = Guid.NewGuid();
 
@@ -110,7 +94,7 @@ namespace IgiCore.Vehicles.Client.Extensions
 			if (vehicle.Mods.IsNeonLightsOn(VehicleNeonLight.Right)) neonPositions |= VehicleNeonPositions.Right;
 			if (vehicle.Mods.IsNeonLightsOn(VehicleNeonLight.Left)) neonPositions |= VehicleNeonPositions.Left;
 
-			return new Vehicle
+			return new T
 			{
 				Id = id,
 				Hash = vehicle.Model.Hash,

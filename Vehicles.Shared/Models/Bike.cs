@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace IgiCore.Vehicles.Shared.Models
+﻿namespace IgiCore.Vehicles.Shared.Models
 {
     public class Bike : Vehicle, IBike
     {

@@ -8,6 +8,7 @@ using IgiCore.Vehicles.Client.Extensions;
 using IgiCore.Vehicles.Shared;
 using IgiCore.Vehicles.Shared.Models;
 using JetBrains.Annotations;
+using NFive.SDK.Client.Commands;
 using NFive.SDK.Client.Events;
 using NFive.SDK.Client.Extensions;
 using NFive.SDK.Client.Input;
@@ -40,9 +41,10 @@ namespace IgiCore.Vehicles.Client
 		{
 			if (Input.IsControlJustPressed(Control.InteractionMenu))
 			{
-				var car = new Car
+				var carToSpawn = new Car
 				{
 					Id = GuidGenerator.GenerateTimeBasedGuid(),
+					Created = DateTime.UtcNow,
 					Hash = (uint)VehicleHash.Elegy,
 					Position = Game.PlayerPed.Position.ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f),
 					PrimaryColor = new Shared.Models.VehicleColor
@@ -57,6 +59,7 @@ namespace IgiCore.Vehicles.Client
 						CustomColor = new Color(),
 						IsCustom = false
 					},
+					NeonColor = new Color(),
 					PearlescentColor = VehicleStockColor.HotPink,
 					Seats = new List<Shared.Models.VehicleSeat>(),
 					Wheels = new List<Shared.Models.VehicleWheel>(),
@@ -64,44 +67,45 @@ namespace IgiCore.Vehicles.Client
 					Doors = new List<Shared.Models.VehicleDoor>()
 				};
 
-				car = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Car>(car);
+				carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Car>(carToSpawn);
 
-				var spawnedVehicle = await car.ToCitizenVehicle();
+				var spawnedVehicle = await carToSpawn.ToCitizenVehicle();
 				API.VehToNet(spawnedVehicle.Handle);
 				API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);
 				var netId = API.NetworkGetNetworkIdFromEntity(spawnedVehicle.Handle);
+				this.Logger.Debug($"Vehicle spawned | ID: {carToSpawn.Id} | NetId: {netId} | Handle: {spawnedVehicle.Handle}");
+				var spawnedCar = spawnedVehicle.ToVehicle<Car>(carToSpawn.Id);
+				spawnedCar.TrackingUserId = this.User.Id;
+				spawnedCar.NetId = netId;
 
-				var vehicle = await spawnedVehicle.ToVehicle(car.Id);
-				vehicle.TrackingUserId = this.User.Id;
-				vehicle.Handle = spawnedVehicle.Handle;
-				vehicle.NetId = netId;
+				this.Logger.Debug($"Spawn car save: {new Serializer().Serialize(spawnedCar)}");
 
-				this.Rpc.Event(VehicleEvents.SaveCar).Trigger(car);
+				this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedCar);
 
 				this.Tracked.Add(new TrackedVehicle
 				{
-					Id = car.Id,
+					Id = spawnedCar.Id,
 					Type = typeof(Car),
-					NetId = car.NetId ?? 0
+					NetId = spawnedCar.NetId ?? 0
 				});
 			}
 		}
 
 		public async Task OnTick()
 		{
-			await Update();
-			await Save();
+			//Update();
+			Save();
 
 			await this.Delay(1000);
 		}
 
-		private async Task Update()
+		private void Update()
 		{
 			foreach (var trackedVehicle in this.Tracked.ToList())
 			{
 				var vehicleHandle = API.NetToVeh(trackedVehicle.NetId);
 				var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
-				var closestPlayer = new CitizenFX.Core.Player(API.GetNearestPlayerToEntity(citVeh.Handle));
+				var closestPlayer = new Player(API.GetNearestPlayerToEntity(citVeh.Handle));
 
 				if (closestPlayer == Game.Player || !API.NetworkIsPlayerConnected(closestPlayer.Handle))
 				{
@@ -116,7 +120,7 @@ namespace IgiCore.Vehicles.Client
 				{
 					var netId = API.NetworkGetNetworkIdFromEntity(citVeh.Handle);
 
-					var car = citVeh.ToCar(); // TODO: Make type ambiguous
+					var car = citVeh.ToVehicle<Car>(); // TODO: Make type ambiguous
 					car.NetId = netId;
 
 					this.Rpc.Event($"igicore:vehicles:{trackedVehicle.Type.VehicleType().Name}:transfer")
@@ -125,31 +129,34 @@ namespace IgiCore.Vehicles.Client
 			}
 		}
 
-		private async Task Save()
+		private void Save()
 		{
 			foreach (var trackedVehicle in this.Tracked)
 			{
 				var vehicleHandle = API.NetToVeh(trackedVehicle.NetId);
+
 				var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
 				var netId = API.NetworkGetNetworkIdFromEntity(citVeh.Handle);
-
-				var vehicle = await citVeh.ToVehicle(trackedVehicle.Id);
-
-				vehicle.TrackingUserId = this.User.Id;
-				vehicle.NetId = netId;
-				vehicle.Hash = citVeh.Model.Hash;
 
 				switch (trackedVehicle.Type.VehicleType().Name)
 				{
 					case "Car":
-						//Car car = (Car)vehicle;
-						// Add car specific props...
-						this.Rpc.Event($"igicore:vehicles:{trackedVehicle.Type.VehicleType().Name}:save")
-							.Trigger(vehicle);
+						//var car = (Car)vehicle; // TODO: explicit converter
+						//Add car specific props...
+						var car = citVeh.ToVehicle<Car>(trackedVehicle.Id);
+						car.TrackingUserId = this.User.Id;
+						car.NetId = netId;
+
+						this.Rpc.Event(VehicleEvents.SaveCar).Trigger(car);
 						break;
 
 					default:
-						this.Rpc.Event($"igicore:vehicles:{trackedVehicle.Type.VehicleType().Name}:save")
+						var vehicle = citVeh.ToVehicle<Car>(trackedVehicle.Id);
+
+						vehicle.TrackingUserId = this.User.Id;
+						vehicle.NetId = netId;
+
+						this.Rpc.Event($"igicore:vehicles:save:{trackedVehicle.Type.VehicleType().Name}")
 							.Trigger(vehicle);
 						break;
 				}

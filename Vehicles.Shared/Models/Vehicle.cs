@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
 using NFive.SDK.Core.Helpers;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Audio;
@@ -57,7 +56,7 @@ namespace IgiCore.Vehicles.Shared.Models
 		public VehicleStockColor PearlescentColor { get; set; }
 		public VehicleStockColor DashboardColor { get; set; }
 		public VehicleStockColor RimColor { get; set; }
-		public Color NeonColor { get; set; }
+		public Color NeonColor { get; set; } = new Color();
 		public VehicleNeonPositions NeonPositions { get; set; }
 		public Color TireSmokeColor { get; set; } = new Color();
 		public VehicleStockColor TrimColor { get; set; }

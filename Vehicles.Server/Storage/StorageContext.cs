@@ -1,6 +1,5 @@
 using System.Data.Entity;
 using IgiCore.Vehicles.Shared.Models;
-using NFive.SDK.Core.Models.Player;
 using NFive.SDK.Server.Storage;
 
 namespace IgiCore.Vehicles.Server.Storage

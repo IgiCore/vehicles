@@ -7,7 +7,10 @@ namespace IgiCore.Vehicles.Shared.Models
 {
     public interface IVehicle : ITrackingObject
     {
-        string VIN { get; set; }
+	    long Hash { get; set; }
+	    Position Position { get; set; }
+	    float Heading { get; set; }
+		string VIN { get; set; }
 	    string LicensePlate { get; set; }
 		float BodyHealth { get; set; }
         float EngineHealth { get; set; }
