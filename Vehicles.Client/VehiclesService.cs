@@ -19,6 +19,7 @@ using NFive.SDK.Core.Extensions;
 using NFive.SDK.Core.Helpers;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Player;
+using NFive.SDK.Core.Rpc;
 using VehicleHash = CitizenFX.Core.VehicleHash;
 
 namespace IgiCore.Vehicles.Client
@@ -29,7 +30,7 @@ namespace IgiCore.Vehicles.Client
 		private const int VehicleLoadDistance = 500;
 		public List<TrackedVehicle> Tracked { get; set; } = new List<TrackedVehicle>();
 
-		public VehiclesService(ILogger logger, ITickManager ticks, IEventManager events, IRpcHandler rpc, OverlayManager overlay, User user) : base(logger, ticks, events, rpc, overlay, user)
+		public VehiclesService(ILogger logger, ITickManager ticks, IEventManager events, IRpcHandler rpc, ICommandManager commands, OverlayManager overlay, User user) : base(logger, ticks, events, rpc, commands, overlay, user)
 		{
 			this.Ticks.Attach(OnTick);
 			this.Ticks.Attach(DebugStuff);

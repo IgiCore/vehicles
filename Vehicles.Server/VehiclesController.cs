@@ -8,6 +8,7 @@ using JetBrains.Annotations;
 using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Server.Controllers;
 using NFive.SDK.Server.Events;
+using NFive.SDK.Server.Rcon;
 using NFive.SDK.Server.Rpc;
 
 namespace IgiCore.Vehicles.Server
@@ -15,7 +16,7 @@ namespace IgiCore.Vehicles.Server
 	[PublicAPI]
 	public class VehiclesController : ConfigurableController<Configuration>
 	{
-		public VehiclesController(ILogger logger, IEventManager events, IRpcHandler rpc, Configuration configuration) : base(logger, events, rpc, configuration)
+		public VehiclesController(ILogger logger, IEventManager events, IRpcHandler rpc, IRconManager rcon, Configuration configuration) : base(logger, events, rpc, rcon, configuration)
 		{
 			this.Rpc.Event(VehicleEvents.CreateCar).On<Car>(Create);
 		}
