@@ -96,7 +96,7 @@ namespace IgiCore.Vehicles.Client
 			//Update();
 			Save();
 
-			await this.Delay(1000);
+			await this.Delay(20000);
 		}
 
 		private void Update()
@@ -113,8 +113,7 @@ namespace IgiCore.Vehicles.Client
 
 					citVeh.Delete();
 					this.Tracked.Remove(trackedVehicle);
-					this.Rpc.Event($"igicore:vehicles:{trackedVehicle.Type.VehicleType().Name}:unclaim")
-						.Trigger(trackedVehicle.NetId);
+					this.Rpc.Event(VehicleEvents.Unclaim).Trigger(trackedVehicle.NetId);
 				}
 				else
 				{
@@ -123,8 +122,7 @@ namespace IgiCore.Vehicles.Client
 					var car = citVeh.ToVehicle<Car>(); // TODO: Make type ambiguous
 					car.NetId = netId;
 
-					this.Rpc.Event($"igicore:vehicles:{trackedVehicle.Type.VehicleType().Name}:transfer")
-						.Trigger(car, closestPlayer.ServerId);
+					this.Rpc.Event(VehicleEvents.Transfer).Trigger(car, closestPlayer.ServerId);
 				}
 			}
 		}

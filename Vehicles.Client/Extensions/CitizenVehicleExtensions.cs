@@ -28,7 +28,13 @@ namespace IgiCore.Vehicles.Client.Extensions
 			var vehicleExtras = new List<VehicleExtra>();
 			for (var i = 0; i < 100; i++)
 			{
-				if (vehicle.ExtraExists(i)) vehicleExtras.Add(new VehicleExtra { Index = i, IsOn = vehicle.IsExtraOn(i), Id = id });
+				if (vehicle.ExtraExists(i)) vehicleExtras.Add(new VehicleExtra
+					{
+						VehicleId = id,
+						Index = i,
+						IsOn = vehicle.IsExtraOn(i),
+						Id = id
+					});
 			}
 
 			// Wheels
@@ -39,7 +45,8 @@ namespace IgiCore.Vehicles.Client.Extensions
 				{
 					vehicleWheels.Add(new VehicleWheel
 					{
-						Type = (VehicleWheelType) vehicle.Mods.WheelType,
+						VehicleId = id,
+						Type = (VehicleWheelType)vehicle.Mods.WheelType,
 						Position = wheelBoneName.Key,
 						Index = vehicle.Wheels[(int)wheelBoneName.Key].Index
 					});
@@ -52,25 +59,29 @@ namespace IgiCore.Vehicles.Client.Extensions
 			{
 				vehicleDoors.Add(new VehicleDoor
 				{
-					Index = (VehicleDoorIndex) vehicleDoor.Index,
+					VehicleId = id,
+					Index = (VehicleDoorIndex)vehicleDoor.Index,
 					IsBroken = vehicleDoor.IsBroken,
 					IsOpen = vehicleDoor.IsOpen,
 					Angle = vehicleDoor.AngleRatio
 				});
 			}
 
+			// Windows
 			var vehicleWindows = new List<VehicleWindow>();
 			foreach (var value in Enum.GetValues(typeof(CitizenFX.Core.VehicleWindowIndex)))
 			{
 				var window = vehicle.Windows[(CitizenFX.Core.VehicleWindowIndex)value];
 				vehicleWindows.Add(new VehicleWindow
 				{
-					Index = (VehicleWindowIndex) value,
+					VehicleId = id,
+					Index = (VehicleWindowIndex)value,
 					IsIntact = window.IsIntact,
 					//TODO: Window rolled down state (has to be self-tracked)
 				});
 			}
 
+			// Seats
 			// TODO: Store player server IDs when communicating with the server and have the server assign a character
 			var players = new PlayerList();
 			var vehicleSeats = new List<VehicleSeat>();
@@ -82,6 +93,7 @@ namespace IgiCore.Vehicles.Client.Extensions
 					{
 						vehicleSeats.Add(new VehicleSeat
 						{
+							VehicleId = id,
 							Index = (VehicleSeatIndex)(int)vehicleOccupant.SeatIndex,
 						});
 					}
@@ -126,9 +138,9 @@ namespace IgiCore.Vehicles.Client.Extensions
 				NeonColor = vehicle.Mods.NeonLightsColor.ToColor(),
 				NeonPositions = neonPositions,
 				TireSmokeColor = vehicle.Mods.TireSmokeColor.ToColor(),
-				WindowTint = (VehicleWindowTint) vehicle.Mods.WindowTint,
-				Class = (VehicleClass) vehicle.ClassType,
-				LockStatus = (VehicleLockStatus) vehicle.LockStatus,
+				WindowTint = (VehicleWindowTint)vehicle.Mods.WindowTint,
+				Class = (VehicleClass)vehicle.ClassType,
+				LockStatus = (VehicleLockStatus)vehicle.LockStatus,
 				CanTiresBurst = vehicle.CanTiresBurst,
 				NeedsToBeHotWired = vehicle.NeedsToBeHotwired,
 				IsVehicleConvertible = vehicle.IsConvertible,

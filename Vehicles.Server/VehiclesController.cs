@@ -1,4 +1,5 @@
 using System;
+using System.Data.Entity;
 using System.Linq;
 using IgiCore.Vehicles.Server.Storage;
 using IgiCore.Vehicles.Shared;
@@ -21,11 +22,6 @@ namespace IgiCore.Vehicles.Server
 			this.Rpc.Event(VehicleEvents.SaveCar).On<Car>(Save);
 		}
 
-		private void SpawnCar(object obj)
-		{
-			
-		}
-
 		public async void Create<T>(IRpcEvent e, T vehicle) where T : class, IVehicle
 		{
 			using (var context = new StorageContext())
@@ -45,13 +41,13 @@ namespace IgiCore.Vehicles.Server
 				if (vehicle.Id == Guid.Empty) vehicle.Id = context.Set<T>().FirstOrDefault(c => c.Handle == vehicle.Handle)?.Id ?? Guid.Empty;
 				if (vehicle.Id == Guid.Empty) return;
 
-				var dbVeh = context.Set<T>()
-					//.Include(v => v.Extras) // TODO: Including these throws errors when there are values in the tables.
-					//.Include(v => v.Wheels)
-					//.Include(v => v.Doors)
-					//.Include(v => v.Windows)
-					//.Include(v => v.Seats)
-					//.Include(v => v.Mods)
+				var dbVeh = context.Vehicles
+					.Include(v => v.Extras) // TODO: Including these throws errors when there are values in the tables.
+					.Include(v => v.Wheels)
+					.Include(v => v.Doors)
+					.Include(v => v.Windows)
+					.Include(v => v.Seats)
+					.Include(v => v.Mods)
 					.FirstOrDefault(c => c.Id == vehicle.Id);
 
 				if (dbVeh == null ||

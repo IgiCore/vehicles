@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using NFive.SDK.Core.Helpers;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Audio;
@@ -64,11 +65,23 @@ namespace IgiCore.Vehicles.Shared.Models
 		public VehicleLockStatus LockStatus { get; set; } = VehicleLockStatus.None;
 		public RadioStation RadioStation { get; set; }
 		public VehicleClass Class { get; set; }
+
+		[InverseProperty("Vehicle")]
 		public virtual List<VehicleExtra> Extras { get; set; } = new List<VehicleExtra>();
+
+		[InverseProperty("Vehicle")]
 		public virtual List<VehicleWindow> Windows { get; set; } = new List<VehicleWindow>();
+
+		[InverseProperty("Vehicle")]
 		public virtual List<VehicleSeat> Seats { get; set; } = new List<VehicleSeat>();
+
+		[InverseProperty("Vehicle")]
 		public virtual List<VehicleMod> Mods { get; set; } = new List<VehicleMod>();
+
+		[InverseProperty("Vehicle")]
 		public virtual List<VehicleDoor> Doors { get; set; } = new List<VehicleDoor>();
+
+		[InverseProperty("Vehicle")]
 		public virtual List<VehicleWheel> Wheels { get; set; } = new List<VehicleWheel>();
 
 		public Vehicle() { this.Id = GuidGenerator.GenerateTimeBasedGuid(); }
