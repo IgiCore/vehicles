@@ -17,7 +17,7 @@ namespace IgiCore.Vehicles.Shared.Models
 		public int? NetId { get; set; }
 		public string VIN { get; set; }
 		public string LicensePlate { get; set; }
-		public Guid TrackingUserId { get; set; }
+		public Guid? TrackingUserId { get; set; }
 		public Position Position { get; set; }
 		public float Heading { get; set; }
 		public float BodyHealth { get; set; } = 1000;
@@ -27,7 +27,6 @@ namespace IgiCore.Vehicles.Shared.Models
 		public float OilLevel { get; set; } = 1000;
 		public float PetrolTankHealth { get; set; } = 1000;
 		public float TowingCraneRaisedAmount { get; set; }
-		
 		public bool HasAlarm { get; set; } = true;
 		public bool IsAlarmed { get; set; } = false;
 		public bool IsAlarmSounding { get; set; } = false;

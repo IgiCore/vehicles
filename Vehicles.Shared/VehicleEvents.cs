@@ -8,5 +8,6 @@
 		public const string SaveBike = "igicore:vehicles:save:bike";
 		public const string Unclaim = "igicore:vehicles:unclaim";
 		public const string Transfer = "igicore:vehicles:transfer";
+		public const string Spawn = "igicore:vehicles:spawn";
 	}
 }

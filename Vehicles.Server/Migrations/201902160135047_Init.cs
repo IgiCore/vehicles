@@ -31,7 +31,7 @@ namespace IgiCore.Vehicles.Server.Migrations
                         NetId = c.Int(),
                         VIN = c.String(maxLength: 1000, unicode: false),
                         LicensePlate = c.String(maxLength: 1000, unicode: false),
-                        TrackingUserId = c.Guid(nullable: false),
+                        TrackingUserId = c.Guid(),
                         Position_X = c.Single(nullable: false),
                         Position_Y = c.Single(nullable: false),
                         Position_Z = c.Single(nullable: false),

@@ -1,15 +1,23 @@
 using System;
 using System.Data.Entity;
 using System.Linq;
+using CitizenFX.Core;
+using IgiCore.Characters.Shared;
 using IgiCore.Vehicles.Server.Storage;
 using IgiCore.Vehicles.Shared;
 using IgiCore.Vehicles.Shared.Models;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
 using NFive.SDK.Core.Diagnostics;
+using NFive.SDK.Core.Helpers;
+using NFive.SDK.Core.Models;
+using NFive.SDK.Core.Rpc;
 using NFive.SDK.Server.Controllers;
 using NFive.SDK.Server.Events;
+using NFive.SDK.Server.Extensions;
 using NFive.SDK.Server.Rcon;
 using NFive.SDK.Server.Rpc;
+using Z.EntityFramework.Plus;
 
 namespace IgiCore.Vehicles.Server
 {
@@ -20,12 +28,32 @@ namespace IgiCore.Vehicles.Server
 		{
 			this.Rpc.Event(VehicleEvents.CreateCar).On<Car>(Create);
 			this.Rpc.Event(VehicleEvents.SaveCar).On<Car>(Save);
+			this.Rpc.Event(CharacterEvents.SavePosition).On<Guid, Position>(LoadNearby);
+
+			this.Cleanup();
 		}
 
-		public async void Create<T>(IRpcEvent e, T vehicle) where T : class, IVehicle
+		protected void Cleanup()
 		{
 			using (var context = new StorageContext())
 			{
+				context.Vehicles.Where(v => v.Handle != null || v.NetId != null || v.TrackingUserId != null).Update(v => new Vehicle
+				{
+					Handle = null,
+					NetId = null,
+					TrackingUserId = null,
+				});
+				context.SaveChanges();
+			}
+		}
+
+		protected async void Create<T>(IRpcEvent e, T vehicle) where T : class, IVehicle
+		{
+			using (var context = new StorageContext())
+			{
+				vehicle.Id = GuidGenerator.GenerateTimeBasedGuid();
+				vehicle.Created = DateTime.UtcNow;
+				vehicle.TrackingUserId = e.User.Id;
 				context.Set<T>().Add(vehicle);
 				await context.SaveChangesAsync();
 			}
@@ -34,8 +62,10 @@ namespace IgiCore.Vehicles.Server
 		}
 
 
-		public async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle // Has no ID
+		protected async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle
 		{
+			this.Logger.Debug($"Saving vehicle: {new Serializer().Serialize(vehicle)}");
+
 			using (var context = new StorageContext())
 			{
 				if (vehicle.Id == Guid.Empty) vehicle.Id = context.Set<T>().FirstOrDefault(c => c.Handle == vehicle.Handle)?.Id ?? Guid.Empty;
@@ -50,11 +80,11 @@ namespace IgiCore.Vehicles.Server
 					.Include(v => v.Mods)
 					.FirstOrDefault(c => c.Id == vehicle.Id);
 
-				if (dbVeh == null ||
-				    vehicle.TrackingUserId != dbVeh.TrackingUserId && dbVeh.TrackingUserId != Guid.Empty) return;
+				if (dbVeh == null || dbVeh.TrackingUserId != null && vehicle.TrackingUserId != dbVeh.TrackingUserId) return;
+
+				vehicle.Created = dbVeh.Created;
 
 				context.Entry(dbVeh).CurrentValues.SetValues(vehicle);
-
 
 				// Wheels
 				foreach (var dbVehWheel in dbVeh.Wheels.ToList())
@@ -142,6 +172,31 @@ namespace IgiCore.Vehicles.Server
 
 				await context.SaveChangesAsync();
 
+			}
+		}
+
+		protected void LoadNearby(IRpcEvent e, Guid playerGuid, Position position)
+		{
+			using (var context = new StorageContext())
+			{
+				this.Logger.Debug($"DespawnDistance: {this.Configuration.DespawnDistance}");
+				this.Logger.Debug($"Checking for vehicles near position: {position}");
+
+				foreach (var vehicle in context.Vehicles
+					.Where(v =>
+						v.Handle == null
+						&& v.Position.X > position.X - this.Configuration.DespawnDistance
+						&& v.Position.X < position.X + this.Configuration.DespawnDistance
+						&& v.Position.Y > position.Y - this.Configuration.DespawnDistance
+						&& v.Position.Y < position.Y + this.Configuration.DespawnDistance
+					)
+					.ToArray()
+					.Where(v => Vector3.Distance(v.Position.ToVector3(), position.ToVector3()) < this.Configuration.DespawnDistance)
+				)
+				{
+					this.Logger.Debug($"Spawning vehicle: {vehicle.Id} | Player: {playerGuid}");
+					e.Client.Event(VehicleEvents.Spawn).Trigger(vehicle);
+				}
 			}
 		}
 	}

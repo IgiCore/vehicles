@@ -1,22 +1,7 @@
 plugins:
-- name: IgiCore/tracking
-  version: 1.0.0
-  description: NFive Plugin
-  author: IgiCore
-  license: LGPL
-  server:
-    main:
-    - IgiCore.Tracking.Server
-    include:
-    - IgiCore.Tracking.Shared
-  client:
-    main:
-    - IgiCore.Tracking.Client
-    include:
-    - IgiCore.Tracking.Shared
 - &o0
   name: NFive/plugin-sessionmanager
-  version: 0.8.1
+  version: 0.8.4
   description: NFive session manager plugin
   author: NFive
   license: LGPL
@@ -53,3 +38,18 @@ plugins:
     - Overlays/style.css
   dependencies:
     NFive/plugin-sessionmanager: '*'
+- name: IgiCore/tracking
+  version: 1.0.0
+  description: NFive Plugin
+  author: IgiCore
+  license: LGPL
+  server:
+    main:
+    - IgiCore.Tracking.Server
+    include:
+    - IgiCore.Tracking.Shared
+  client:
+    main:
+    - IgiCore.Tracking.Client
+    include:
+    - IgiCore.Tracking.Shared

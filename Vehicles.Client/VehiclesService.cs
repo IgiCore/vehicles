@@ -21,6 +21,7 @@ using NFive.SDK.Core.Helpers;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Player;
 using NFive.SDK.Core.Rpc;
+using Vehicle = IgiCore.Vehicles.Shared.Models.Vehicle;
 using VehicleHash = CitizenFX.Core.VehicleHash;
 
 namespace IgiCore.Vehicles.Client
@@ -33,6 +34,8 @@ namespace IgiCore.Vehicles.Client
 
 		public VehiclesService(ILogger logger, ITickManager ticks, IEventManager events, IRpcHandler rpc, ICommandManager commands, OverlayManager overlay, User user) : base(logger, ticks, events, rpc, commands, overlay, user)
 		{
+			this.Rpc.Event(VehicleEvents.Spawn).On<Vehicle>(Spawn);
+
 			this.Ticks.Attach(OnTick);
 			this.Ticks.Attach(DebugStuff);
 		}
@@ -43,8 +46,6 @@ namespace IgiCore.Vehicles.Client
 			{
 				var carToSpawn = new Car
 				{
-					Id = GuidGenerator.GenerateTimeBasedGuid(),
-					Created = DateTime.UtcNow,
 					Hash = (uint)VehicleHash.Elegy,
 					Position = Game.PlayerPed.Position.ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f),
 					PrimaryColor = new Shared.Models.VehicleColor
@@ -69,25 +70,7 @@ namespace IgiCore.Vehicles.Client
 
 				carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Car>(carToSpawn);
 
-				var spawnedVehicle = await carToSpawn.ToCitizenVehicle();
-				API.VehToNet(spawnedVehicle.Handle);
-				API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);
-				var netId = API.NetworkGetNetworkIdFromEntity(spawnedVehicle.Handle);
-				this.Logger.Debug($"Vehicle spawned | ID: {carToSpawn.Id} | NetId: {netId} | Handle: {spawnedVehicle.Handle}");
-				var spawnedCar = spawnedVehicle.ToVehicle<Car>(carToSpawn.Id);
-				spawnedCar.TrackingUserId = this.User.Id;
-				spawnedCar.NetId = netId;
-
-				this.Logger.Debug($"Spawn car save: {new Serializer().Serialize(spawnedCar)}");
-
-				this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedCar);
-
-				this.Tracked.Add(new TrackedVehicle
-				{
-					Id = spawnedCar.Id,
-					Type = typeof(Car),
-					NetId = spawnedCar.NetId ?? 0
-				});
+				this.Spawn<Car>(null, carToSpawn);
 			}
 		}
 
@@ -97,6 +80,29 @@ namespace IgiCore.Vehicles.Client
 			Save();
 
 			await this.Delay(20000);
+		}
+
+		private async void Spawn<T>(IRpcEvent e, T vehicle) where T : Vehicle
+		{
+			var spawnedVehicle = await vehicle.ToCitizenVehicle();
+			API.VehToNet(spawnedVehicle.Handle);
+			API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);
+			var netId = API.NetworkGetNetworkIdFromEntity(spawnedVehicle.Handle);
+			this.Logger.Debug($"Vehicle spawned | ID: {vehicle.Id} | NetId: {netId} | Handle: {spawnedVehicle.Handle}");
+			var spawnedCar = spawnedVehicle.ToVehicle<Car>(vehicle.Id);
+			spawnedCar.TrackingUserId = this.User.Id;
+			spawnedCar.NetId = netId;
+
+			this.Logger.Debug($"Spawn car save: {new Serializer().Serialize(spawnedCar)}");
+
+			this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedCar);
+
+			this.Tracked.Add(new TrackedVehicle
+			{
+				Id = spawnedCar.Id,
+				Type = typeof(Car),
+				NetId = spawnedCar.NetId ?? 0
+			});
 		}
 
 		private void Update()
