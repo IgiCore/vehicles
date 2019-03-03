@@ -76,7 +76,7 @@ namespace IgiCore.Vehicles.Client
 
 		public async Task OnTick()
 		{
-			//Update();
+			Update();
 			Save();
 
 			await this.Delay(20000);
@@ -119,7 +119,7 @@ namespace IgiCore.Vehicles.Client
 
 					citVeh.Delete();
 					this.Tracked.Remove(trackedVehicle);
-					this.Rpc.Event(VehicleEvents.Unclaim).Trigger(trackedVehicle.NetId);
+					this.Rpc.Event(VehicleEvents.Destroy).Trigger(trackedVehicle.NetId);
 				}
 				else
 				{

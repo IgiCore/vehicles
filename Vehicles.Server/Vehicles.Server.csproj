@@ -59,6 +59,10 @@
       <HintPath>..\packages\Google.Protobuf.3.6.1\lib\net45\Google.Protobuf.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="IgiCore.Characters.Server.net, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\plugins\IgiCore\characters\IgiCore.Characters.Server.net.dll</HintPath>
+    </Reference>
     <Reference Include="IgiCore.Characters.Shared.net, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\plugins\IgiCore\characters\IgiCore.Characters.Shared.net.dll</HintPath>

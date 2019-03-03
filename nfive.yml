@@ -15,7 +15,7 @@ client:
   include:
   - IgiCore.Vehicles.Shared
 dependencies:
-  IgiCore/characters: ^1.0.0
+  IgiCore/characters: '*'
   IgiCore/tracking: '*'
   NFive/plugin-sessionmanager: '*'
 repositories:
@@ -28,3 +28,6 @@ repositories:
 - name: IgiCore/tracking
   type: local
   path: G:\Workspace\plugins\IgiCore\tracking
+- name: IgiCore/characters
+  type: local
+  path: G:\Workspace\plugins\IgiCore\characters
