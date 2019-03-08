@@ -17,7 +17,6 @@ client:
 dependencies:
   IgiCore/characters: '*'
   IgiCore/tracking: '*'
-  NFive/plugin-sessionmanager: '*'
 repositories:
 - name: IgiCore/characters
   type: local
