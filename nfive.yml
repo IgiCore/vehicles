@@ -8,15 +8,14 @@ server:
   - IgiCore.Vehicles.Server
   include:
   - IgiCore.Vehicles.Shared
-  - Z.EntityFramework.Plus.EF6
 client:
   main:
   - IgiCore.Vehicles.Client
   include:
   - IgiCore.Vehicles.Shared
 dependencies:
-  IgiCore/characters: '*'
-  IgiCore/tracking: '*'
+  IgiCore/characters: ^1.0.0
+  IgiCore/tracking: ^1.0.0
 repositories:
 - name: IgiCore/characters
   type: local
