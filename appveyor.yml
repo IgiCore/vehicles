@@ -44,6 +44,7 @@ install:
     }
 
     Update-AppveyorBuild -Version $env:BUILD_VERSION_FILE
+- appveyor DownloadFile https://dl.nfive.io/nfpm.exe
 
 assembly_info:
   patch: true
@@ -53,13 +54,14 @@ assembly_info:
   assembly_informational_version: $(BUILD_VERSION_FRIENDLY)
 
 before_build:
-- cmd: nuget restore
+- nuget restore
+- nfpm install
 
 build:
   verbosity: minimal
 
 after_build:
-- ps: 7z a "$($env:APPVEYOR_PROJECT_NAME).zip" *.dll nfive.yml nfive.lock README.md LICENSE Overlays/
+- nfpm pack
 
 artifacts:
 - path: $(APPVEYOR_PROJECT_NAME).zip
