@@ -1,12 +1,12 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("IgiCore vehicles")]
+[assembly: AssemblyTitle("IgiCore Vehicles")]
 [assembly: AssemblyDescription("NFive Plugin")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("IgiCore")]
 [assembly: AssemblyProduct("IgiCore vehicles Shared Library")]
-[assembly: AssemblyCopyright("Copyright © IgiCore 2018")]
+[assembly: AssemblyCopyright("Copyright © IgiCore 2018-2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

@@ -24,9 +24,3 @@ repositories:
 - name: IgiCore/tracking
   type: local
   path: G:\Workspace\plugins\IgiCore\tracking
-- name: IgiCore/tracking
-  type: local
-  path: G:\Workspace\plugins\IgiCore\tracking
-- name: IgiCore/characters
-  type: local
-  path: G:\Workspace\plugins\IgiCore\characters
