@@ -44,33 +44,31 @@ namespace IgiCore.Vehicles.Client
 		{
 			if (Input.IsControlJustPressed(Control.InteractionMenu))
 			{
-				var carToSpawn = new Car
+
+				var carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Vehicle>();
+
+				carToSpawn.Hash = (uint) VehicleHash.Elegy;
+				carToSpawn.Position = Game.PlayerPed.Position.ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f);
+				carToSpawn.PrimaryColor = new Shared.Models.VehicleColor
 				{
-					Hash = (uint)VehicleHash.Elegy,
-					Position = Game.PlayerPed.Position.ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f),
-					PrimaryColor = new Shared.Models.VehicleColor
-					{
-						StockColor = VehicleStockColor.HotPink,
-						CustomColor = new Color(),
-						IsCustom = false
-					},
-					SecondaryColor = new Shared.Models.VehicleColor
-					{
-						StockColor = VehicleStockColor.MattePurple,
-						CustomColor = new Color(),
-						IsCustom = false
-					},
-					NeonColor = new Color(),
-					PearlescentColor = VehicleStockColor.HotPink,
-					Seats = new List<Shared.Models.VehicleSeat>(),
-					Wheels = new List<Shared.Models.VehicleWheel>(),
-					Windows = new List<Shared.Models.VehicleWindow>(),
-					Doors = new List<Shared.Models.VehicleDoor>()
+					StockColor = VehicleStockColor.HotPink,
+					CustomColor = new Color(),
+					IsCustom = false
 				};
+				carToSpawn.SecondaryColor = new Shared.Models.VehicleColor
+				{
+					StockColor = VehicleStockColor.MattePurple,
+					CustomColor = new Color(),
+					IsCustom = false
+				};
+				carToSpawn.NeonColor = new Color();
+				carToSpawn.PearlescentColor = VehicleStockColor.HotPink;
+				carToSpawn.Seats = new List<Shared.Models.VehicleSeat>();
+				carToSpawn.Wheels = new List<Shared.Models.VehicleWheel>();
+				carToSpawn.Windows = new List<Shared.Models.VehicleWindow>();
+				carToSpawn.Doors = new List<Shared.Models.VehicleDoor>();
 
-				carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Car>(carToSpawn);
-
-				this.Spawn<Car>(null, carToSpawn);
+				this.Spawn(null, carToSpawn.ToCar());
 			}
 		}
 
@@ -90,7 +88,8 @@ namespace IgiCore.Vehicles.Client
 			API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);
 			var netId = API.NetworkGetNetworkIdFromEntity(spawnedVehicle.Handle);
 			this.Logger.Debug($"Vehicle spawned | ID: {vehicle.Id} | NetId: {netId} | Handle: {spawnedVehicle.Handle}");
-			var spawnedCar = spawnedVehicle.ToVehicle<Car>(vehicle.Id);
+			var spawnedCar = spawnedVehicle.ToVehicle<Car>();
+			spawnedCar.Id = vehicle.Id;
 			spawnedCar.TrackingUserId = this.User.Id;
 			spawnedCar.NetId = netId;
 
@@ -148,7 +147,8 @@ namespace IgiCore.Vehicles.Client
 					case "Car":
 						//var car = (Car)vehicle; // TODO: explicit converter
 						//Add car specific props...
-						var car = citVeh.ToVehicle<Car>(trackedVehicle.Id);
+						var car = citVeh.ToVehicle<Car>();
+						car.Id = trackedVehicle.Id;
 						car.TrackingUserId = this.User.Id;
 						car.NetId = netId;
 
@@ -156,8 +156,8 @@ namespace IgiCore.Vehicles.Client
 						break;
 
 					default:
-						var vehicle = citVeh.ToVehicle<Car>(trackedVehicle.Id);
-
+						var vehicle = citVeh.ToVehicle<Car>();
+						vehicle.Id = trackedVehicle.Id;
 						vehicle.TrackingUserId = this.User.Id;
 						vehicle.NetId = netId;
 
@@ -169,7 +169,7 @@ namespace IgiCore.Vehicles.Client
 		}
 		public class TrackedVehicle
 		{
-			public Guid Id { get; set; }
+			public int Id { get; set; }
 			public int NetId { get; set; }
 			public Type Type { get; set; }
 		}

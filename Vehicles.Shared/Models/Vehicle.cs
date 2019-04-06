@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using NFive.SDK.Core.Helpers;
@@ -9,7 +9,7 @@ namespace IgiCore.Vehicles.Shared.Models
 {
 	public class Vehicle : IVehicle
 	{
-		public Guid Id { get; set; }
+		public int Id { get; set; }
 		public DateTime Created { get; set; }
 		public DateTime? Deleted { get; set; }
 		public long Hash { get; set; }
@@ -17,7 +17,7 @@ namespace IgiCore.Vehicles.Shared.Models
 		public int? NetId { get; set; }
 		public string VIN { get; set; }
 		public string LicensePlate { get; set; }
-		public Guid? TrackingUserId { get; set; }
+		public Guid TrackingUserId { get; set; }
 		public Position Position { get; set; }
 		public float Heading { get; set; }
 		public float BodyHealth { get; set; } = 1000;
@@ -66,24 +66,22 @@ namespace IgiCore.Vehicles.Shared.Models
 		public VehicleClass Class { get; set; }
 
 		[InverseProperty("Vehicle")]
-		public virtual List<VehicleExtra> Extras { get; set; } = new List<VehicleExtra>();
+		public virtual List<VehicleExtra> Extras { get; set; }
 
 		[InverseProperty("Vehicle")]
-		public virtual List<VehicleWindow> Windows { get; set; } = new List<VehicleWindow>();
+		public virtual List<VehicleWindow> Windows { get; set; }
 
 		[InverseProperty("Vehicle")]
-		public virtual List<VehicleSeat> Seats { get; set; } = new List<VehicleSeat>();
+		public virtual List<VehicleSeat> Seats { get; set; }
 
 		[InverseProperty("Vehicle")]
-		public virtual List<VehicleMod> Mods { get; set; } = new List<VehicleMod>();
+		public virtual List<VehicleMod> Mods { get; set; }
 
 		[InverseProperty("Vehicle")]
-		public virtual List<VehicleDoor> Doors { get; set; } = new List<VehicleDoor>();
+		public virtual List<VehicleDoor> Doors { get; set; }
 
 		[InverseProperty("Vehicle")]
-		public virtual List<VehicleWheel> Wheels { get; set; } = new List<VehicleWheel>();
-
-		public Vehicle() { this.Id = GuidGenerator.GenerateTimeBasedGuid(); }
+		public virtual List<VehicleWheel> Wheels { get; set; }
 
 	}
 }

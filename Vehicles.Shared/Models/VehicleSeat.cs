@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using IgiCore.Characters.Shared.Models;
@@ -14,7 +14,7 @@ namespace IgiCore.Vehicles.Shared.Models
 
         [Required]
         [ForeignKey("Vehicle")]
-        public Guid VehicleId { get; set; }
+        public int VehicleId { get; set; }
 
         [JsonIgnore]
         public virtual Vehicle Vehicle { get; set; }

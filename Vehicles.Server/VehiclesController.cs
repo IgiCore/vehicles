@@ -13,7 +13,7 @@ using IgiCore.Vehicles.Shared.Models;
 using JetBrains.Annotations;
 using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Core.Helpers;
-using NFive.SDK.Core.Rpc;
+using NFive.SDK.Core.Models;
 using NFive.SDK.Server.Controllers;
 using NFive.SDK.Server.Events;
 using NFive.SDK.Server.Extensions;
@@ -32,7 +32,7 @@ namespace IgiCore.Vehicles.Server
 		{
 			this.characterManager = new CharacterManager(this.Events, this.Rpc);
 
-			this.Rpc.Event(VehicleEvents.CreateCar).On<Car>(Create);
+			this.Rpc.Event(VehicleEvents.CreateCar).On(Create);
 			this.Rpc.Event(VehicleEvents.SaveCar).On<Car>(Save);
 			this.Rpc.Event(VehicleEvents.Destroy).On<int>(Destroy);
 
@@ -60,7 +60,6 @@ namespace IgiCore.Vehicles.Server
 					
 					await Task.Delay(this.Configuration.TrackingPollRate);
 				}
-				
 			});
 		}
 
@@ -74,7 +73,7 @@ namespace IgiCore.Vehicles.Server
 				{
 					vehicle.Handle = null;
 					vehicle.NetId = null;
-					vehicle.TrackingUserId = null;
+					vehicle.TrackingUserId = Guid.Empty;
 					context.Vehicles.AddOrUpdate(vehicle);
 				}
 
@@ -82,27 +81,32 @@ namespace IgiCore.Vehicles.Server
 			}
 		}
 
-		protected async void Create<T>(IRpcEvent e, T vehicle) where T : class, IVehicle
+		protected async void Create(IRpcEvent e)
 		{
 			using (var context = new StorageContext())
 			{
-				vehicle.Id = GuidGenerator.GenerateTimeBasedGuid();
-				vehicle.Created = DateTime.UtcNow;
-				vehicle.TrackingUserId = e.User.Id;
-				context.Set<T>().Add(vehicle);
+				var vehicle = new Vehicle
+				{
+					TrackingUserId = e.User.Id,
+					Created = DateTime.UtcNow,
+					Position = new Position
+					{
+						X = float.MinValue,
+						Y = float.MinValue,
+						Z = float.MinValue,
+					},
+				};
+				context.Vehicles.Add(vehicle);
 				await context.SaveChangesAsync();
-			}
 
-			e.Reply(vehicle);
+				e.Reply(vehicle);
+			}
 		}
 
 		protected async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle
 		{
 			using (var context = new StorageContext())
 			{
-				if (vehicle.Id == Guid.Empty) vehicle.Id = context.Set<T>().FirstOrDefault(c => c.Handle == vehicle.Handle)?.Id ?? Guid.Empty;
-				if (vehicle.Id == Guid.Empty) return;
-
 				var dbVeh = context.Vehicles
 					.Include(v => v.Extras)
 					.Include(v => v.Wheels)
@@ -112,7 +116,7 @@ namespace IgiCore.Vehicles.Server
 					.Include(v => v.Mods)
 					.FirstOrDefault(c => c.Id == vehicle.Id);
 
-				if (dbVeh == null || dbVeh.TrackingUserId != null && vehicle.TrackingUserId != dbVeh.TrackingUserId) return;
+				if (dbVeh == null || dbVeh.TrackingUserId != Guid.Empty && vehicle.TrackingUserId != dbVeh.TrackingUserId) return;
 
 				vehicle.Created = dbVeh.Created;
 
@@ -129,6 +133,7 @@ namespace IgiCore.Vehicles.Server
 					if (dbVehWheel != null)
 					{
 						vehWheel.Id = dbVehWheel.Id;
+						vehWheel.VehicleId = vehicle.Id;
 						context.Entry(dbVehWheel).CurrentValues.SetValues(vehWheel);
 						// We have to manually set enums for some reason...
 						context.Entry(dbVehWheel).Property("Position").CurrentValue = vehWheel.Position;
@@ -147,6 +152,7 @@ namespace IgiCore.Vehicles.Server
 					if (dbVehDoor != null)
 					{
 						vehDoor.Id = dbVehDoor.Id;
+						vehDoor.VehicleId = vehicle.Id;
 						context.Entry(dbVehDoor).CurrentValues.SetValues(vehDoor);
 					}
 					else dbVeh.Doors.Add(vehDoor);
@@ -163,6 +169,7 @@ namespace IgiCore.Vehicles.Server
 					if (dbVehExtra != null)
 					{
 						vehExtra.Id = dbVehExtra.Id;
+						vehExtra.VehicleId = vehicle.Id;
 						context.Entry(dbVehExtra).CurrentValues.SetValues(vehExtra);
 					}
 					else dbVeh.Extras.Add(vehExtra);
@@ -179,6 +186,7 @@ namespace IgiCore.Vehicles.Server
 					if (dbVehWindow != null)
 					{
 						vehWindow.Id = dbVehWindow.Id;
+						vehWindow.VehicleId = vehicle.Id;
 						context.Entry(dbVehWindow).CurrentValues.SetValues(vehWindow);
 					}
 					else dbVeh.Windows.Add(vehWindow);
@@ -195,6 +203,7 @@ namespace IgiCore.Vehicles.Server
 					if (dbVehSeat != null)
 					{
 						vehSeat.Id = dbVehSeat.Id;
+						vehSeat.VehicleId = vehicle.Id;
 						context.Entry(dbVehSeat).CurrentValues.SetValues(vehSeat);
 					}
 					else dbVeh.Seats.Add(vehSeat);
@@ -218,7 +227,7 @@ namespace IgiCore.Vehicles.Server
 
 				vehicle.Handle = null;
 				vehicle.NetId = null;
-				vehicle.TrackingUserId = null;
+				vehicle.TrackingUserId = Guid.Empty;
 				context.Vehicles.AddOrUpdate(vehicle);
 
 				await context.SaveChangesAsync();

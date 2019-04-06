@@ -69,6 +69,7 @@
     <Compile Include="Models\IBikePlane.cs" />
     <Compile Include="Models\IBoat.cs" />
     <Compile Include="Models\ICar.cs" />
+    <Compile Include="Models\IdentityModel.cs" />
     <Compile Include="Models\IHelicopter.cs" />
     <Compile Include="Models\IMotorbike.cs" />
     <Compile Include="Models\IPedalBike.cs" />

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using CitizenFX.Core;
 using IgiCore.Vehicles.Shared.Models;
@@ -20,9 +20,8 @@ namespace IgiCore.Vehicles.Client.Extensions
 	public static class CitizenVehicleExtensions
 	{
 
-		public static T ToVehicle<T>(this CitizenFX.Core.Vehicle vehicle, Guid id = default(Guid)) where T : IVehicle, new()
+		public static T ToVehicle<T>(this CitizenFX.Core.Vehicle vehicle) where T : IVehicle, new()
 		{
-			if (id == default(Guid)) id = Guid.NewGuid();
 
 			// Extras
 			var vehicleExtras = new List<VehicleExtra>();
@@ -30,10 +29,8 @@ namespace IgiCore.Vehicles.Client.Extensions
 			{
 				if (vehicle.ExtraExists(i)) vehicleExtras.Add(new VehicleExtra
 					{
-						VehicleId = id,
 						Index = i,
 						IsOn = vehicle.IsExtraOn(i),
-						Id = id
 					});
 			}
 
@@ -45,7 +42,6 @@ namespace IgiCore.Vehicles.Client.Extensions
 				{
 					vehicleWheels.Add(new VehicleWheel
 					{
-						VehicleId = id,
 						Type = (VehicleWheelType)vehicle.Mods.WheelType,
 						Position = wheelBoneName.Key,
 						Index = vehicle.Wheels[(int)wheelBoneName.Key].Index
@@ -59,7 +55,6 @@ namespace IgiCore.Vehicles.Client.Extensions
 			{
 				vehicleDoors.Add(new VehicleDoor
 				{
-					VehicleId = id,
 					Index = (VehicleDoorIndex)vehicleDoor.Index,
 					IsBroken = vehicleDoor.IsBroken,
 					IsOpen = vehicleDoor.IsOpen,
@@ -74,7 +69,6 @@ namespace IgiCore.Vehicles.Client.Extensions
 				var window = vehicle.Windows[(CitizenFX.Core.VehicleWindowIndex)value];
 				vehicleWindows.Add(new VehicleWindow
 				{
-					VehicleId = id,
 					Index = (VehicleWindowIndex)value,
 					IsIntact = window.IsIntact,
 					//TODO: Window rolled down state (has to be self-tracked)
@@ -93,7 +87,6 @@ namespace IgiCore.Vehicles.Client.Extensions
 					{
 						vehicleSeats.Add(new VehicleSeat
 						{
-							VehicleId = id,
 							Index = (VehicleSeatIndex)(int)vehicleOccupant.SeatIndex,
 						});
 					}
@@ -108,7 +101,6 @@ namespace IgiCore.Vehicles.Client.Extensions
 
 			return new T
 			{
-				Id = id,
 				Hash = vehicle.Model.Hash,
 				Handle = vehicle.Handle,
 				Position = vehicle.Position.ToPosition(),

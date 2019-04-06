@@ -1,13 +1,20 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using IgiCore.Tracking.Shared.Models;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Audio;
 
 namespace IgiCore.Vehicles.Shared.Models
 {
-    public interface IVehicle : ITrackingObject
+    public interface IVehicle
     {
-	    long Hash { get; set; }
+	    int Id { get; set; }
+	    int? Handle { get; set; }
+	    Guid TrackingUserId { get; set; }
+	    int? NetId { get; set; }
+	    DateTime Created { get; set; }
+	    DateTime? Deleted { get; set; }
+		long Hash { get; set; }
 	    Position Position { get; set; }
 	    float Heading { get; set; }
 		string VIN { get; set; }
