@@ -28,28 +28,28 @@ namespace IgiCore.Vehicles.Shared.Models
 		public float PetrolTankHealth { get; set; } = 1000;
 		public float TowingCraneRaisedAmount { get; set; }
 		public bool HasAlarm { get; set; } = true;
-		public bool IsAlarmed { get; set; } = false;
-		public bool IsAlarmSounding { get; set; } = false;
+		public bool IsAlarmed { get; set; }
+		public bool IsAlarmSounding { get; set; }
 		public bool HasLock { get; set; } = true;
 		public bool IsDrivable { get; set; }
 		public bool IsEngineRunning { get; set; } = true;
 		public bool HasSeatBelts { get; set; }
-		public bool IsHighBeamsOn { get; set; } = false;
-		public bool IsLightsOn { get; set; } = false;
-		public bool IsInteriorLightOn { get; set; } = false;
-		public bool IsSearchLightOn { get; set; } = false;
-		public bool IsTaxiLightOn { get; set; } = false;
-		public bool IsLeftIndicatorLightOn { get; set; } = false;
-		public bool IsRightIndicatorLightOn { get; set; } = false;
-		public bool IsFrontBumperBrokenOff { get; set; } = false;
-		public bool IsRearBumperBrokenOff { get; set; } = false;
-		public bool IsLeftHeadLightBroken { get; set; } = false;
-		public bool IsRightHeadLightBroken { get; set; } = false;
-		public bool IsRadioEnabled { get; set; } = false;
-		public bool IsRoofOpen { get; set; } = false;
+		public bool IsHighBeamsOn { get; set; }
+		public bool IsLightsOn { get; set; }
+		public bool IsInteriorLightOn { get; set; }
+		public bool IsSearchLightOn { get; set; }
+		public bool IsTaxiLightOn { get; set; }
+		public bool IsLeftIndicatorLightOn { get; set; }
+		public bool IsRightIndicatorLightOn { get; set; }
+		public bool IsFrontBumperBrokenOff { get; set; }
+		public bool IsRearBumperBrokenOff { get; set; }
+		public bool IsLeftHeadLightBroken { get; set; }
+		public bool IsRightHeadLightBroken { get; set; }
+		public bool IsRadioEnabled { get; set; }
+		public bool IsRoofOpen { get; set; }
 		public bool NeedsToBeHotWired { get; set; }
 		public bool HasRoof { get; set; } = true;
-		public bool IsVehicleConvertible { get; set; } = false;
+		public bool IsVehicleConvertible { get; set; }
 		public bool CanTiresBurst { get; set; } = true;
 		public VehicleColor PrimaryColor { get; set; } = new VehicleColor();
 		public VehicleColor SecondaryColor { get; set; } = new VehicleColor();

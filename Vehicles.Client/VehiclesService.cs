@@ -84,6 +84,7 @@ namespace IgiCore.Vehicles.Client
 
 		private async void Spawn<T>(IRpcEvent e, T vehicle) where T : Vehicle
 		{
+			this.Logger.Debug("Spawn()");
 			var spawnedVehicle = await vehicle.ToCitizenVehicle();
 			API.VehToNet(spawnedVehicle.Handle);
 			API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);

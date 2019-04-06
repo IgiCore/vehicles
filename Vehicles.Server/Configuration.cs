@@ -7,5 +7,6 @@ namespace IgiCore.Vehicles.Server
 	{
 		public ushort DespawnDistance { get; set; } = 500;
 		public TimeSpan SpawnPollRate { get; set; } = TimeSpan.FromSeconds(30);
+		public TimeSpan TrackingPollRate { get; set; } = TimeSpan.FromSeconds(30);
 	}
 }

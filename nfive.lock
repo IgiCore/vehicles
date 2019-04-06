@@ -1,0 +1,34 @@
+plugins:
+- name: IgiCore/characters
+  version: 1.0.0
+  description: NFive Plugin
+  author: IgiCore
+  license: LGPL
+  server:
+    main:
+    - IgiCore.Characters.Server
+    include:
+    - IgiCore.Characters.Shared
+  client:
+    main:
+    - IgiCore.Characters.Client
+    include:
+    - IgiCore.Characters.Shared
+    files:
+    - Overlays/CharacterOverlay.html
+    - Overlays/Character.js
+    - Overlays/CharacterSelect.js
+    - Overlays/gravity.woff2
+    - Overlays/main.js
+    - Overlays/pricedown.woff2
+    - Overlays/style.css
+- name: IgiCore/tracking
+  version: 1.0.0
+  description: NFive Plugin
+  author: IgiCore
+  license: LGPL
+  server:
+    main:
+    - IgiCore.Tracking.Server
+    include:
+    - IgiCore.Tracking.Shared
