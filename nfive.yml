@@ -8,7 +8,6 @@ server:
   - IgiCore.Vehicles.Server
   include:
   - IgiCore.Vehicles.Shared
-  - Z.EntityFramework.Plus.BatchUpdate.EF6
 client:
   main:
   - IgiCore.Vehicles.Client
