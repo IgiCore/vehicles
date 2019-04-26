@@ -17,9 +17,9 @@ dependencies:
   IgiCore/characters: ^1.0.0
   IgiCore/tracking: ^1.0.0
 repositories:
-- name: IgiCore/characters
-  type: local
-  path: G:\Workspace\plugins\IgiCore\characters
 - name: IgiCore/tracking
   type: local
   path: G:\Workspace\plugins\IgiCore\tracking
+- name: IgiCore/characters
+  type: local
+  path: G:\Workspace\plugins\IgiCore\characters

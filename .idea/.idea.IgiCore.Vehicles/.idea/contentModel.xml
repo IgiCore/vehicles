@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\Users\Igi\.Rider2018.3\system\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\Igi\.Rider2018.3\system\resharper-host\local\Transient\ReSharperHost\v183\SolutionCaches\_IgiCore.Vehicles.-1096806788.00" t="ExcludeRecursive" />
+    <e p="G:\Workspace\plugins\IgiCore\vehicles" t="ExcludeRecursive">
+      <e p="IgiCore.Vehicles.sln" t="IncludeFlat" />
+      <e p="nfive.yml" t="Include" />
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="Solution Items" t="Include" />
+      <e p="Vehicles.Client" t="IncludeRecursive">
+        <e p="Extensions" t="Include">
+          <e p="CitizenVehicleExtensions.cs" t="Include" />
+          <e p="ColorExtensions.cs" t="Include" />
+          <e p="VehicleExtensions.cs" t="Include" />
+        </e>
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="packages.config" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+        <e p="Vehicles.Client.csproj" t="IncludeRecursive" />
+        <e p="VehiclesService.cs" t="Include" />
+      </e>
+      <e p="Vehicles.Server" t="IncludeRecursive">
+        <e p="Configuration.cs" t="Include" />
+        <e p="Migrations" t="Include">
+          <e p="201904062322370_Init.cs" t="Include" />
+          <e p="Configuration.cs" t="Include" />
+        </e>
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="packages.config" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+        <e p="Rpc" t="Include">
+          <e p="Client.cs" t="Include" />
+        </e>
+        <e p="Storage" t="Include">
+          <e p="StorageContext.cs" t="Include" />
+        </e>
+        <e p="Vehicles.Server.csproj" t="IncludeRecursive" />
+        <e p="VehiclesController.cs" t="Include" />
+      </e>
+      <e p="Vehicles.Shared" t="IncludeRecursive">
+        <e p="Models" t="Include">
+          <e p="Bike.cs" t="Include" />
+          <e p="Car.cs" t="Include" />
+          <e p="IAerialVehicle.cs" t="Include" />
+          <e p="IAirship.cs" t="Include" />
+          <e p="IBike.cs" t="Include" />
+          <e p="IBikePlane.cs" t="Include" />
+          <e p="IBoat.cs" t="Include" />
+          <e p="ICar.cs" t="Include" />
+          <e p="IdentityModel.cs" t="Include" />
+          <e p="IHelicopter.cs" t="Include" />
+          <e p="IMotorbike.cs" t="Include" />
+          <e p="IPedalBike.cs" t="Include" />
+          <e p="IPlane.cs" t="Include" />
+          <e p="IRoadVehicle.cs" t="Include" />
+          <e p="ISeaPlane.cs" t="Include" />
+          <e p="ISeaVehicle.cs" t="Include" />
+          <e p="ISubmersibleVehicle.cs" t="Include" />
+          <e p="ITrailer.cs" t="Include" />
+          <e p="IVehicle.cs" t="Include" />
+          <e p="Trailer.cs" t="Include" />
+          <e p="Vehicle.cs" t="Include" />
+          <e p="VehicleBones.cs" t="Include" />
+          <e p="VehicleClass.cs" t="Include" />
+          <e p="VehicleColor.cs" t="Include" />
+          <e p="VehicleDoor.cs" t="Include" />
+          <e p="VehicleDoorIndex.cs" t="Include" />
+          <e p="VehicleExtra.cs" t="Include" />
+          <e p="VehicleHash.cs" t="Include" />
+          <e p="VehicleLockStatus.cs" t="Include" />
+          <e p="VehicleMod.cs" t="Include" />
+          <e p="VehicleModType.cs" t="Include" />
+          <e p="VehicleNeonLight.cs" t="Include" />
+          <e p="VehicleSeat.cs" t="Include" />
+          <e p="VehicleSeatIndex.cs" t="Include" />
+          <e p="VehicleStockColor.cs" t="Include" />
+          <e p="VehicleWheel.cs" t="Include" />
+          <e p="VehicleWheelBones.cs" t="Include" />
+          <e p="VehicleWheelPosition.cs" t="Include" />
+          <e p="VehicleWheelType.cs" t="Include" />
+          <e p="VehicleWindow.cs" t="Include" />
+          <e p="VehicleWindowIndex.cs" t="Include" />
+          <e p="VehicleWindowTint.cs" t="Include" />
+        </e>
+        <e p="obj" t="ExcludeRecursive" />
+        <e p="packages.config" t="Include" />
+        <e p="Properties" t="Include">
+          <e p="AssemblyInfo.cs" t="Include" />
+        </e>
+        <e p="VehicleEvents.cs" t="Include" />
+        <e p="Vehicles.Shared.csproj" t="IncludeRecursive" />
+      </e>
+    </e>
+  </component>
+</project>

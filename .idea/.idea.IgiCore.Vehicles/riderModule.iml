@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="RIDER_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../IgiCore.Vehicles.sln" />
+    <content url="file://$MODULE_DIR$/../../Solution Items" />
+    <content url="file://$MODULE_DIR$/../../Vehicles.Client" />
+    <content url="file://$MODULE_DIR$/../../Vehicles.Server" />
+    <content url="file://$MODULE_DIR$/../../Vehicles.Shared" />
+    <content url="file://$MODULE_DIR$/../../nfive.yml" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
