@@ -17,7 +17,6 @@ using NFive.SDK.Client.Rpc;
 using NFive.SDK.Client.Services;
 using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Core.Extensions;
-using NFive.SDK.Core.Helpers;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Player;
 using NFive.SDK.Core.Rpc;
@@ -29,12 +28,24 @@ namespace IgiCore.Vehicles.Client
 	[PublicAPI]
 	public class VehiclesService : Service
 	{
+		private Configuration config;
 		private const int VehicleLoadDistance = 500;
 		public List<TrackedVehicle> Tracked { get; set; } = new List<TrackedVehicle>();
 
-		public VehiclesService(ILogger logger, ITickManager ticks, IEventManager events, IRpcHandler rpc, ICommandManager commands, OverlayManager overlay, User user) : base(logger, ticks, events, rpc, commands, overlay, user)
+		public VehiclesService(ILogger logger, ITickManager ticks, IEventManager events, IRpcHandler rpc,
+			ICommandManager commands, OverlayManager overlay, User user) : base(logger, ticks, events, rpc, commands,
+			overlay, user)
 		{
+		}
+
+		public override async Task Started()
+		{
+			this.config = await this.Rpc.Event(VehicleEvents.GetConfiguration).Request<Configuration>();
+
 			this.Rpc.Event(VehicleEvents.Spawn).On<Vehicle>(Spawn);
+			this.Rpc.Event(VehicleEvents.Despawn).On<Vehicle>(Despawn);
+			this.Rpc.Event(VehicleEvents.Transfer).On<Vehicle, int>(Transfer);
+			this.Rpc.Event(VehicleEvents.Claim).On<Vehicle>(Claim);
 
 			this.Ticks.Attach(OnTick);
 			this.Ticks.Attach(DebugStuff);
@@ -44,7 +55,6 @@ namespace IgiCore.Vehicles.Client
 		{
 			if (Input.IsControlJustPressed(Control.InteractionMenu))
 			{
-
 				var carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Vehicle>();
 
 				carToSpawn.Hash = (uint) VehicleHash.Elegy;
@@ -74,7 +84,6 @@ namespace IgiCore.Vehicles.Client
 
 		public async Task OnTick()
 		{
-			Update();
 			Save();
 
 			await this.Delay(20000);
@@ -105,32 +114,52 @@ namespace IgiCore.Vehicles.Client
 			});
 		}
 
-		private void Update()
+		private void Despawn<T>(IRpcEvent e, T vehicle) where T : Vehicle
 		{
-			foreach (var trackedVehicle in this.Tracked.ToList())
+			this.Logger.Debug("Despawn()");
+			if (vehicle.NetId == null) return;
+			var vehicleHandle = API.NetToVeh(vehicle.NetId ?? 0);
+
+			var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
+			citVeh.Delete();
+
+			this.Tracked.Remove(this.Tracked.FirstOrDefault(v => v.NetId == vehicle.NetId));
+
+			this.Rpc.Event(VehicleEvents.Despawn).Trigger(vehicle.NetId);
+		}
+
+		private void Transfer(IRpcEvent e, Vehicle vehicle, int transferToHandle)
+		{
+			if (vehicle.NetId == null) return;
+
+			this.Tracked.Remove(this.Tracked.FirstOrDefault(v => v.NetId == vehicle.NetId));
+
+			this.Rpc.Event(VehicleEvents.Transfer).Trigger(vehicle, transferToHandle);
+		}
+
+		private void Claim(IRpcEvent e, Vehicle vehicle)
+		{
+			if (vehicle.NetId == null) return;
+
+			var vehicleHandle = API.NetToVeh(vehicle.NetId ?? 0);
+			var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
+
+			var spawnedVehicle = citVeh.ToVehicle<Vehicle>();
+
+			spawnedVehicle.Id = vehicle.Id;
+			spawnedVehicle.TrackingUserId = this.User.Id;
+			spawnedVehicle.NetId = vehicle.NetId;
+
+			this.Logger.Debug($"Claim vehicle save: {new Serializer().Serialize(spawnedVehicle)}");
+
+			this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedVehicle);
+
+			this.Tracked.Add(new TrackedVehicle
 			{
-				var vehicleHandle = API.NetToVeh(trackedVehicle.NetId);
-				var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
-				var closestPlayer = new Player(API.GetNearestPlayerToEntity(citVeh.Handle));
-
-				if (closestPlayer == Game.Player || !API.NetworkIsPlayerConnected(closestPlayer.Handle))
-				{
-					if (!(Vector3.Distance(Game.Player.Character.Position, citVeh.Position) > VehicleLoadDistance)) continue;
-
-					citVeh.Delete();
-					this.Tracked.Remove(trackedVehicle);
-					this.Rpc.Event(VehicleEvents.Destroy).Trigger(trackedVehicle.NetId);
-				}
-				else
-				{
-					var netId = API.NetworkGetNetworkIdFromEntity(citVeh.Handle);
-
-					var car = citVeh.ToVehicle<Car>(); // TODO: Make type ambiguous
-					car.NetId = netId;
-
-					this.Rpc.Event(VehicleEvents.Transfer).Trigger(car, closestPlayer.ServerId);
-				}
-			}
+				Id = spawnedVehicle.Id,
+				Type = typeof(Car),
+				NetId = spawnedVehicle.NetId ?? 0
+			});
 		}
 
 		private void Save()
@@ -167,6 +196,7 @@ namespace IgiCore.Vehicles.Client
 				}
 			}
 		}
+
 		public class TrackedVehicle
 		{
 			public int Id { get; set; }
