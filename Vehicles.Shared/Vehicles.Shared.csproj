@@ -61,6 +61,7 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configuration.cs" />
     <Compile Include="Models\Bike.cs" />
     <Compile Include="Models\Car.cs" />
     <Compile Include="Models\IAerialVehicle.cs" />
