@@ -15,6 +15,7 @@ using JetBrains.Annotations;
 using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Rpc;
+using NFive.SDK.Server;
 using NFive.SDK.Server.Controllers;
 using NFive.SDK.Server.Events;
 using NFive.SDK.Server.Extensions;
@@ -30,6 +31,7 @@ namespace IgiCore.Vehicles.Server
 		private static readonly object SpawnLock = new object();
 		private readonly CharacterManager characterManager;
 		private readonly SessionManager sessionManager;
+		private readonly IClientList clientList;
 
 		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 		public List<Vehicle> ActiveVehicles
@@ -51,8 +53,10 @@ namespace IgiCore.Vehicles.Server
 		}
 
 		public VehiclesController(ILogger logger, IEventManager events, IRpcHandler rpc, IRconManager rcon,
-			Configuration configuration) : base(logger, events, rpc, rcon, configuration)
+			Configuration configuration, IClientList clientList) : base(logger, events, rpc, rcon, configuration)
 		{
+			this.clientList = clientList;
+
 			this.characterManager = new CharacterManager(this.Events, this.Rpc);
 			this.sessionManager = new SessionManager(this.Events, this.Rpc);
 
@@ -277,6 +281,8 @@ namespace IgiCore.Vehicles.Server
 		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 		protected void SpawnForPlayer(CharacterSessionEventArgs e)
 		{
+			this.Logger.Debug($"Spawning vehicles for player handle: {e.CharacterSession.Session.Handle}");
+
 			var vehiclesToSpawn = this.ActiveVehicles
 				.Where(v =>
 					v.Handle == null
@@ -289,7 +295,10 @@ namespace IgiCore.Vehicles.Server
 				this.Logger.Debug($"Spawning vehicles {vehicle.Id} for character {e.CharacterSession.Character.Id}");
 				this.Logger.Debug($"Session handle: {e.CharacterSession.Session.Handle}");
 
-				this.Rpc.Event(VehicleEvents.Spawn).Trigger(new Client(e.CharacterSession.Session.Handle), vehicle);
+				this.Logger.Debug($"ClientList count: {this.clientList.Clients.Count}");
+				this.Logger.Debug($"ClientList: {new Serializer().Serialize(this.clientList)}");
+
+				this.Rpc.Event(VehicleEvents.Spawn).Target(this.clientList.Clients.First(c => c.Handle == e.CharacterSession.Session.Handle)).Trigger(vehicle);
 			}
 		}
 
@@ -318,7 +327,7 @@ namespace IgiCore.Vehicles.Server
 
 				this.Logger.Debug($"Spawning vehicle: {vehicle.Id}");
 
-				this.Rpc.Event(VehicleEvents.Spawn).Trigger(new Client(characterSession.Session.Handle), vehicle);
+				this.Rpc.Event(VehicleEvents.Spawn).Target(this.clientList.Clients.First(c => c.Handle == characterSession.Session.Handle)).Trigger(vehicle);
 			}
 		}
 
@@ -357,7 +366,7 @@ namespace IgiCore.Vehicles.Server
 						characterSessions.FirstOrDefault(s => s.Session.UserId == vehicle.TrackingUserId);
 					if (trackingUser == null) continue;
 
-					this.Rpc.Event(VehicleEvents.Transfer).Trigger(new Client(trackingUser.Session.Handle), vehicle,
+					this.Rpc.Event(VehicleEvents.Transfer).Target(this.clientList.Clients.First(c => c.Handle == trackingUser.Session.Handle)).Trigger(vehicle,
 						nearestCharacter.CharSession.Session.Handle);
 				}
 			}
@@ -366,15 +375,13 @@ namespace IgiCore.Vehicles.Server
 		protected void Transfer(IRpcEvent e, Vehicle vehicle, int transferToHandle)
 		{
 			this.Logger.Debug($"Transferring vehicle: {vehicle.Id}");
-			this.Rpc.Event(VehicleEvents.Claim).Trigger(new Client(transferToHandle), vehicle);
+			this.Rpc.Event(VehicleEvents.Claim).Target(this.clientList.Clients.First(c => c.Handle == transferToHandle)).Trigger(vehicle);
 		}
 
-		protected async void Despawn(Vehicle vehicle, int playerHandle)
+		protected void Despawn(Vehicle vehicle, int playerHandle)
 		{
-			this.Logger.Debug($"Despawing vehicle: {vehicle.Id}");
-			var client = new Client(playerHandle);
-			this.Logger.Debug($"Client: {new Serializer().Serialize(client)}");
-			this.Rpc.Event(VehicleEvents.Despawn).Trigger(client, vehicle);
+			this.Logger.Debug($"Despawning vehicle: {vehicle.Id}");
+			this.Rpc.Event(VehicleEvents.Despawn).Target(this.clientList.Clients.First(c => c.Handle == playerHandle)).Trigger(vehicle);
 		}
 	}
 }
