@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using CitizenFX.Core;
+using CitizenFX.Core.Native;
 using IgiCore.Vehicles.Shared.Models;
 using NFive.SDK.Client.Extensions;
 using Vehicle = IgiCore.Vehicles.Shared.Models.Vehicle;
@@ -26,7 +27,13 @@ namespace IgiCore.Vehicles.Client.Extensions
 		public static async Task<CitizenFX.Core.Vehicle> ToCitizenVehicle(this Vehicle vehicle)
 		{
 			var citizenVehicle = await World.CreateVehicle(new Model((int)vehicle.Hash), vehicle.Position.ToVector3(), vehicle.Heading);
+			if (!API.DoesEntityExist(citizenVehicle.Handle))
+			{
+				throw new Exception("Failed to create vehicle in game world.");
+			}
 
+			citizenVehicle.Rotation = new Vector3(vehicle.Rotation.X, vehicle.Rotation.Y, vehicle.Rotation.Z);
+			citizenVehicle.SteeringAngle = vehicle.SteeringAngle;
 			citizenVehicle.BodyHealth = vehicle.BodyHealth;
 			citizenVehicle.EngineHealth = vehicle.EngineHealth;
 			citizenVehicle.DirtLevel = vehicle.DirtLevel;
@@ -95,6 +102,8 @@ namespace IgiCore.Vehicles.Client.Extensions
 			LicensePlate = vehicle.LicensePlate,
 			TrackingUserId = vehicle.TrackingUserId,
 			Position = vehicle.Position,
+			Rotation = vehicle.Rotation,
+			SteeringAngle = vehicle.SteeringAngle,
 			Heading = vehicle.Heading,
 			BodyHealth = vehicle.BodyHealth,
 			EngineHealth = vehicle.EngineHealth,
