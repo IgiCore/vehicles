@@ -5,7 +5,6 @@ using System.Data.Entity.Migrations;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using CitizenFX.Core;
 using IgiCore.Characters.Server;
 using IgiCore.Characters.Server.Events;
 using IgiCore.Vehicles.Server.Storage;
@@ -14,7 +13,6 @@ using IgiCore.Vehicles.Shared.Models;
 using JetBrains.Annotations;
 using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Core.Models;
-using NFive.SDK.Core.Rpc;
 using NFive.SDK.Server;
 using NFive.SDK.Server.Controllers;
 using NFive.SDK.Server.Events;
@@ -22,6 +20,8 @@ using NFive.SDK.Server.Extensions;
 using NFive.SDK.Server.Rcon;
 using NFive.SDK.Server.Rpc;
 using NFive.SDK.Server.Wrappers;
+using Z.EntityFramework.Plus;
+using Vector3 = CitizenFX.Core.Vector3;
 
 namespace IgiCore.Vehicles.Server
 {
@@ -56,38 +56,35 @@ namespace IgiCore.Vehicles.Server
 			Configuration configuration, IClientList clientList) : base(logger, events, rpc, rcon, configuration)
 		{
 			this.clientList = clientList;
-
 			this.characterManager = new CharacterManager(this.Events, this.Rpc);
 			this.sessionManager = new SessionManager(this.Events, this.Rpc);
+		}
 
+		public override Task Started()
+		{
+			this.Cleanup();
+
+			// Attach event handlers.
 			this.Rpc.Event(VehicleEvents.GetConfiguration).On(e => e.Reply(this.Configuration));
-
 			this.Rpc.Event(VehicleEvents.CreateCar).On(Create);
 			this.Rpc.Event(VehicleEvents.SaveCar).On<Car>(Save);
 			this.Rpc.Event(VehicleEvents.Despawn).On<int>(Destroy);
-			this.Rpc.Event(VehicleEvents.Transfer).On<Vehicle, int>(Transfer);
-
+			this.Rpc.Event(VehicleEvents.Transfer).On<int, Guid>(Transfer);
 			this.characterManager.Selected += (r, e) => SpawnForPlayer(e);
-
 			this.sessionManager.ClientDisconnected += (r, e) => OnClientDisconnect(e);
 
-			this.Cleanup();
-
+			// Start vehicle spawning thread.
 			Task.Factory.StartNew(async () =>
 			{
 				while (true)
 				{
-					lock (SpawnLock)
-					{
-						this.Spawn();
-					}
-
+					this.Spawn();
 					await Task.Delay(this.Configuration.SpawnPollRate);
 				}
-
-				// ReSharper disable once FunctionNeverReturns
 			});
 
+
+			// Start tracking update thread.
 			Task.Factory.StartNew(async () =>
 			{
 				while (true)
@@ -95,20 +92,45 @@ namespace IgiCore.Vehicles.Server
 					Update();
 					await Task.Delay(this.Configuration.TrackingPollRate);
 				}
-
-				// ReSharper disable once FunctionNeverReturns
 			});
+
+			return base.Started();
 		}
 
 		protected void OnClientDisconnect(ClientSessionEventArgs e)
 		{
-			// TODO:
+			var characterSessions = this.characterManager.ActiveCharacterSessions;
+
+			foreach (var vehicle in this.ActiveVehicles.Where(v => v.Handle != null).ToList())
+			{
+				var nearestCharacter = characterSessions
+					.Where(c => c.IsConnected && c.SessionId != e.Session.Id)
+					.Select(s => new
+					{
+						CharSession = s,
+						Dist = Vector3.Distance(vehicle.Position.ToVector3(), s.Character.Position.ToVector3())
+					})
+					.OrderBy(c => c.Dist)
+					.FirstOrDefault();
+				if (nearestCharacter == null)
+				{
+					this.Destroy(null, vehicle.NetId ?? 0);
+				}
+				else
+				{
+					this.Transfer(null, vehicle.Id, nearestCharacter.CharSession.Session.UserId);
+				}
+
+			}
 		}
 
 		protected void Cleanup()
 		{
 			using (var context = new StorageContext())
+			using (var transaction = context.Database.BeginTransaction())
 			{
+				context.Vehicles.Where(v => v.Hash == 0).Delete();
+
 				var vehicles = context.Vehicles
 					.Where(v => v.Handle != null || v.NetId != null || v.TrackingUserId != null).ToList();
 
@@ -120,13 +142,17 @@ namespace IgiCore.Vehicles.Server
 					context.Vehicles.AddOrUpdate(vehicle);
 				}
 
+
+
 				context.SaveChanges();
+				transaction.Commit();
 			}
 		}
 
 		protected async void Create(IRpcEvent e)
 		{
 			using (var context = new StorageContext())
+			using (var transaction = context.Database.BeginTransaction())
 			{
 				var vehicle = new Vehicle
 				{
@@ -138,9 +164,12 @@ namespace IgiCore.Vehicles.Server
 						Y = float.MinValue,
 						Z = float.MinValue,
 					},
+					Rotation = new NFive.SDK.Core.Models.Vector3()
 				};
 				context.Vehicles.Add(vehicle);
+
 				await context.SaveChangesAsync();
+				transaction.Commit();
 
 				e.Reply(vehicle);
 			}
@@ -149,6 +178,7 @@ namespace IgiCore.Vehicles.Server
 		protected async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle
 		{
 			using (var context = new StorageContext())
+			using (var transaction = context.Database.BeginTransaction())
 			{
 				var dbVeh = context.Vehicles
 					.Include(v => v.Extras)
@@ -160,7 +190,7 @@ namespace IgiCore.Vehicles.Server
 					.FirstOrDefault(c => c.Id == vehicle.Id);
 
 				if (dbVeh == null ||
-				    dbVeh.TrackingUserId != Guid.Empty && vehicle.TrackingUserId != dbVeh.TrackingUserId) return;
+				    dbVeh.TrackingUserId != Guid.Empty && e.User.Id != dbVeh.TrackingUserId) return;
 
 				vehicle.Created = dbVeh.Created;
 
@@ -256,6 +286,7 @@ namespace IgiCore.Vehicles.Server
 				// TODO: Mods
 
 				await context.SaveChangesAsync();
+				transaction.Commit();
 			}
 		}
 
@@ -264,9 +295,9 @@ namespace IgiCore.Vehicles.Server
 			using (var context = new StorageContext())
 			using (var transaction = context.Database.BeginTransaction())
 			{
-				var vehicle = await context.Vehicles
-					.Where(v => v.NetId == netId && v.TrackingUserId == e.User.Id)
-					.FirstAsync();
+				var userId = e?.User.Id ?? Guid.Empty;
+				var vehicle = context.Vehicles.FirstOrDefault(v => v.NetId == netId &&  (userId == Guid.Empty || v.TrackingUserId == userId));
+				if (vehicle == null) return;
 
 				vehicle.Handle = null;
 				vehicle.NetId = null;
@@ -278,74 +309,69 @@ namespace IgiCore.Vehicles.Server
 			}
 		}
 
-		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 		protected void SpawnForPlayer(CharacterSessionEventArgs e)
 		{
-			this.Logger.Debug($"Spawning vehicles for player handle: {e.CharacterSession.Session.Handle}");
-
-			var vehiclesToSpawn = this.ActiveVehicles
-				.Where(v =>
-					v.Handle == null
-					&& Vector3.Distance(v.Position.ToVector3(), e.CharacterSession.Character.Position.ToVector3()) <
-					this.Configuration.DespawnDistance
-				);
-
-			foreach (var vehicle in vehiclesToSpawn)
+			lock (SpawnLock)
 			{
-				this.Logger.Debug($"Spawning vehicles {vehicle.Id} for character {e.CharacterSession.Character.Id}");
-				this.Logger.Debug($"Session handle: {e.CharacterSession.Session.Handle}");
+				var vehiclesToSpawn = this.ActiveVehicles
+					.Where(v =>
+						v.Handle == null
+						&& Vector3.Distance(v.Position.ToVector3(), e.CharacterSession.Character.Position.ToVector3()) <
+						this.Configuration.DespawnDistance
+					);
 
-				this.Logger.Debug($"ClientList count: {this.clientList.Clients.Count}");
-				this.Logger.Debug($"ClientList: {new Serializer().Serialize(this.clientList)}");
-
-				this.Rpc.Event(VehicleEvents.Spawn).Target(this.clientList.Clients.First(c => c.Handle == e.CharacterSession.Session.Handle)).Trigger(vehicle);
+				foreach (var vehicle in vehiclesToSpawn)
+				{
+					// TODO: Await client response to prevent races.
+					this.Rpc.Event(VehicleEvents.Spawn)
+						.Target(this.clientList.Clients.First(c => c.Handle == e.CharacterSession.Session.Handle))
+						.Trigger(vehicle);
+				}
 			}
 		}
 
-		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 		protected void Spawn()
 		{
-			this.Logger.Debug("Spawn()");
-			var vehiclesToSpawn = this.ActiveVehicles.Where(v => v.Handle == null);
-			var characterSessions = this.characterManager.ActiveCharacterSessions;
-
-			foreach (var vehicle in vehiclesToSpawn)
+			lock (SpawnLock)
 			{
-				var characterToSpawn = characterSessions
-					.Select(s => new
-					{
-						Char = s.Character,
-						Dist = Vector3.Distance(vehicle.Position.ToVector3(), s.Character.Position.ToVector3())
-					})
-					.Where(c => c.Dist < this.Configuration.DespawnDistance)
-					.OrderBy(c => c.Dist)
-					.FirstOrDefault();
-				if (characterToSpawn == null) continue;
-				var characterSession =
-					characterSessions.FirstOrDefault(s => s.Character.Id == characterToSpawn.Char.Id);
-				if (characterSession == null) continue;
+				var vehiclesToSpawn = this.ActiveVehicles.Where(v => v.Handle == null);
+				var characterSessions = this.characterManager.ActiveCharacterSessions;
 
-				this.Logger.Debug($"Spawning vehicle: {vehicle.Id}");
+				foreach (var vehicle in vehiclesToSpawn)
+				{
+					var characterToSpawn = characterSessions
+						.Where(c => c.IsConnected)
+						.Select(s => new
+						{
+							Char = s.Character,
+							Dist = Vector3.Distance(vehicle.Position.ToVector3(), s.Character.Position.ToVector3())
+						})
+						.Where(c => c.Dist < this.Configuration.DespawnDistance)
+						.OrderBy(c => c.Dist)
+						.FirstOrDefault();
+					if (characterToSpawn == null) continue;
+					var characterSession =
+						characterSessions.FirstOrDefault(s => s.Character.Id == characterToSpawn.Char.Id);
+					if (characterSession == null) continue;
 
-				this.Rpc.Event(VehicleEvents.Spawn).Target(this.clientList.Clients.First(c => c.Handle == characterSession.Session.Handle)).Trigger(vehicle);
+					// TODO: Await client response to prevent races.
+					this.Rpc.Event(VehicleEvents.Spawn)
+						.Target(this.clientList.Clients.First(c => c.Handle == characterSession.Session.Handle))
+						.Trigger(vehicle);
+				}
 			}
 		}
 
-		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 		protected void Update()
 		{
-			this.Logger.Debug("Update()");
-
 			var activeVehicles = this.ActiveVehicles.Where(v => v.Handle != null).ToList();
-
-			this.Logger.Debug($"Checking vehicles: {activeVehicles.Count()}");
 
 			var characterSessions = this.characterManager.ActiveCharacterSessions;
 
 			foreach (var vehicle in activeVehicles)
 			{
-				this.Logger.Debug($"Checking vehicle: {vehicle.Id}");
 				var nearestCharacter = characterSessions
+					.Where(c => c.IsConnected)
 					.Select(s => new
 					{
 						CharSession = s,
@@ -354,11 +380,9 @@ namespace IgiCore.Vehicles.Server
 					.OrderBy(c => c.Dist)
 					.FirstOrDefault();
 				if (nearestCharacter == null) continue;
-				this.Logger.Debug($"Nearest character distance: {nearestCharacter.Dist} | Despawn Distance: {this.Configuration.DespawnDistance}");
-
 				if (nearestCharacter.Dist > this.Configuration.DespawnDistance)
 				{
-					Despawn(vehicle, nearestCharacter.CharSession.Session.Handle);
+					Despawn(vehicle.NetId ?? 0, nearestCharacter.CharSession.Session.Handle);
 				}
 				else if (nearestCharacter.CharSession.Session.UserId != vehicle.TrackingUserId)
 				{
@@ -366,22 +390,35 @@ namespace IgiCore.Vehicles.Server
 						characterSessions.FirstOrDefault(s => s.Session.UserId == vehicle.TrackingUserId);
 					if (trackingUser == null) continue;
 
-					this.Rpc.Event(VehicleEvents.Transfer).Target(this.clientList.Clients.First(c => c.Handle == trackingUser.Session.Handle)).Trigger(vehicle,
-						nearestCharacter.CharSession.Session.Handle);
+					this.Rpc.Event(VehicleEvents.Transfer)
+						.Target(this.clientList.Clients.First(c => c.Handle == trackingUser.Session.Handle))
+						.Trigger(vehicle.Id, nearestCharacter.CharSession.Session.UserId);
 				}
 			}
 		}
 
-		protected void Transfer(IRpcEvent e, Vehicle vehicle, int transferToHandle)
+		protected void Transfer(IRpcEvent e, int vehicleId, Guid transferToUserId)
 		{
-			this.Logger.Debug($"Transferring vehicle: {vehicle.Id}");
-			this.Rpc.Event(VehicleEvents.Claim).Target(this.clientList.Clients.First(c => c.Handle == transferToHandle)).Trigger(vehicle);
+			var transferToHandle = this.characterManager.ActiveCharacterSessions.First(c => c.Session.UserId == transferToUserId).Session.Handle;
+			var transferToClient = this.clientList.Clients.First(c => c.Handle == transferToHandle);
+			var transferVehicle = this.ActiveVehicles.First(v => v.Id == vehicleId);
+
+			this.Rpc.Event(VehicleEvents.Claim)
+				.Target(transferToClient)
+				.Trigger(vehicleId, transferVehicle.NetId);
+
+			using (var context = new StorageContext())
+			using (var transaction = context.Database.BeginTransaction())
+			{
+				context.Vehicles.First(v => v.Id == vehicleId).TrackingUserId = transferToUserId;
+				context.SaveChanges();
+				transaction.Commit();
+			}
 		}
 
-		protected void Despawn(Vehicle vehicle, int playerHandle)
+		protected void Despawn(int vehicleNetId, int playerHandle)
 		{
-			this.Logger.Debug($"Despawning vehicle: {vehicle.Id}");
-			this.Rpc.Event(VehicleEvents.Despawn).Target(this.clientList.Clients.First(c => c.Handle == playerHandle)).Trigger(vehicle);
+			this.Rpc.Event(VehicleEvents.Despawn).Target(this.clientList.Clients.First(c => c.Handle == playerHandle)).Trigger(vehicleNetId);
 		}
 	}
 }

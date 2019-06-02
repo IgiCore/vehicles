@@ -1,9 +1,7 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using IgiCore.Characters.Shared.Models;
 using Newtonsoft.Json;
-using NFive.SDK.Core.Models;
 
 namespace IgiCore.Vehicles.Shared.Models
 {

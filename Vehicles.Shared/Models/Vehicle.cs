@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
-using NFive.SDK.Core.Helpers;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Audio;
 
@@ -20,6 +19,8 @@ namespace IgiCore.Vehicles.Shared.Models
 		public Guid TrackingUserId { get; set; }
 		public Position Position { get; set; }
 		public float Heading { get; set; }
+		public Vector3 Rotation { get; set; }
+		public float SteeringAngle { get; set; }
 		public float BodyHealth { get; set; } = 1000;
 		public float EngineHealth { get; set; } = 1000;
 		public float DirtLevel { get; set; }

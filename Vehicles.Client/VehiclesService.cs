@@ -19,7 +19,6 @@ using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Core.Extensions;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Player;
-using NFive.SDK.Core.Rpc;
 using Vehicle = IgiCore.Vehicles.Shared.Models.Vehicle;
 using VehicleHash = CitizenFX.Core.VehicleHash;
 
@@ -43,9 +42,9 @@ namespace IgiCore.Vehicles.Client
 			this.config = await this.Rpc.Event(VehicleEvents.GetConfiguration).Request<Configuration>();
 
 			this.Rpc.Event(VehicleEvents.Spawn).On<Vehicle>(Spawn);
-			this.Rpc.Event(VehicleEvents.Despawn).On<Vehicle>(Despawn);
-			this.Rpc.Event(VehicleEvents.Transfer).On<Vehicle, int>(Transfer);
-			this.Rpc.Event(VehicleEvents.Claim).On<Vehicle>(Claim);
+			this.Rpc.Event(VehicleEvents.Despawn).On<int>(Despawn);
+			this.Rpc.Event(VehicleEvents.Transfer).On<int, Guid>(Transfer);
+			this.Rpc.Event(VehicleEvents.Claim).On<int, int>(Claim);
 
 			this.Ticks.Attach(OnTick);
 			this.Ticks.Attach(DebugStuff);
@@ -84,90 +83,84 @@ namespace IgiCore.Vehicles.Client
 
 		public async Task OnTick()
 		{
-			Save();
+			SaveTracked();
 
-			await this.Delay(20000);
+			await this.Delay(this.config.AutosaveRate);
 		}
 
 		private async void Spawn<T>(IRpcEvent e, T vehicle) where T : Vehicle
 		{
-			this.Logger.Debug("Spawn()");
-			var spawnedVehicle = await vehicle.ToCitizenVehicle();
-			API.VehToNet(spawnedVehicle.Handle);
-			API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);
-			var netId = API.NetworkGetNetworkIdFromEntity(spawnedVehicle.Handle);
-			this.Logger.Debug($"Vehicle spawned | ID: {vehicle.Id} | NetId: {netId} | Handle: {spawnedVehicle.Handle}");
-			var spawnedCar = spawnedVehicle.ToVehicle<Car>();
-			spawnedCar.Id = vehicle.Id;
-			spawnedCar.TrackingUserId = this.User.Id;
-			spawnedCar.NetId = netId;
+			try
+			{
+				var spawnedVehicle = await vehicle.ToCitizenVehicle();
+				API.VehToNet(spawnedVehicle.Handle);
+				API.NetworkRegisterEntityAsNetworked(spawnedVehicle.Handle);
+				var netId = API.NetworkGetNetworkIdFromEntity(spawnedVehicle.Handle);
+				var spawnedCar = spawnedVehicle.ToVehicle<Car>();
+				spawnedCar.Id = vehicle.Id;
+				spawnedCar.TrackingUserId = this.User.Id;
+				spawnedCar.NetId = netId;
 
-			this.Logger.Debug($"Spawn car save: {new Serializer().Serialize(spawnedCar)}");
+				this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedCar);
 
-			this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedCar);
+				this.Tracked.Add(new TrackedVehicle
+				{
+					Id = spawnedCar.Id,
+					Type = typeof(Car),
+					NetId = spawnedCar.NetId ?? 0
+				});
+			}
+			catch (Exception exception)
+			{
+				this.Logger.Error(exception, $"Failed to spawn vehicle with ID {vehicle.Id}");
+			}
 
+		}
+
+		private void Despawn(IRpcEvent e, int vehicleNetId)
+		{
+			if (API.NetworkDoesNetworkIdExist(vehicleNetId))
+			{
+				var citVeh = new CitizenFX.Core.Vehicle(API.NetToVeh(vehicleNetId));
+				citVeh.Delete();
+			}
+
+			this.Tracked.Remove(this.Tracked.FirstOrDefault(v => v.NetId == vehicleNetId));
+			this.Rpc.Event(VehicleEvents.Despawn).Trigger(vehicleNetId);
+		}
+
+		private void Transfer(IRpcEvent e, int vehicleId, Guid transferToUserId)
+		{
+			this.Tracked.Remove(this.Tracked.First(v => v.Id == vehicleId));
+			this.Rpc.Event(VehicleEvents.Transfer).Trigger(vehicleId, transferToUserId);
+		}
+
+		private void Claim(IRpcEvent e, int vehicleId, int vehicleNetId)
+		{
 			this.Tracked.Add(new TrackedVehicle
 			{
-				Id = spawnedCar.Id,
+				Id = vehicleId,
 				Type = typeof(Car),
-				NetId = spawnedCar.NetId ?? 0
+				NetId = vehicleNetId
 			});
 		}
 
-		private void Despawn<T>(IRpcEvent e, T vehicle) where T : Vehicle
-		{
-			this.Logger.Debug("Despawn()");
-			if (vehicle.NetId == null) return;
-			var vehicleHandle = API.NetToVeh(vehicle.NetId ?? 0);
-
-			var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
-			citVeh.Delete();
-
-			this.Tracked.Remove(this.Tracked.FirstOrDefault(v => v.NetId == vehicle.NetId));
-
-			this.Rpc.Event(VehicleEvents.Despawn).Trigger(vehicle.NetId);
-		}
-
-		private void Transfer(IRpcEvent e, Vehicle vehicle, int transferToHandle)
-		{
-			if (vehicle.NetId == null) return;
-
-			this.Tracked.Remove(this.Tracked.FirstOrDefault(v => v.NetId == vehicle.NetId));
-
-			this.Rpc.Event(VehicleEvents.Transfer).Trigger(vehicle, transferToHandle);
-		}
-
-		private void Claim(IRpcEvent e, Vehicle vehicle)
-		{
-			if (vehicle.NetId == null) return;
-
-			var vehicleHandle = API.NetToVeh(vehicle.NetId ?? 0);
-			var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
-
-			var spawnedVehicle = citVeh.ToVehicle<Vehicle>();
-
-			spawnedVehicle.Id = vehicle.Id;
-			spawnedVehicle.TrackingUserId = this.User.Id;
-			spawnedVehicle.NetId = vehicle.NetId;
-
-			this.Logger.Debug($"Claim vehicle save: {new Serializer().Serialize(spawnedVehicle)}");
-
-			this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedVehicle);
-
-			this.Tracked.Add(new TrackedVehicle
-			{
-				Id = spawnedVehicle.Id,
-				Type = typeof(Car),
-				NetId = spawnedVehicle.NetId ?? 0
-			});
-		}
-
-		private void Save()
+		private void SaveTracked()
 		{
 			foreach (var trackedVehicle in this.Tracked)
 			{
+				if (!API.NetworkDoesNetworkIdExist(trackedVehicle.NetId))
+				{
+					this.Despawn(null, trackedVehicle.NetId);
+					continue;
+				}
 				var vehicleHandle = API.NetToVeh(trackedVehicle.NetId);
 
+				if (!API.DoesEntityExist(vehicleHandle))
+				{
+					this.Despawn(null, trackedVehicle.NetId);
+					continue;
+				}
 				var citVeh = new CitizenFX.Core.Vehicle(vehicleHandle);
 				var netId = API.NetworkGetNetworkIdFromEntity(citVeh.Handle);
 

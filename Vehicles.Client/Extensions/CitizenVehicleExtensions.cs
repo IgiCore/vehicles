@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CitizenFX.Core;
 using IgiCore.Vehicles.Shared.Models;
 using NFive.SDK.Client.Extensions;
+using Vector3 = NFive.SDK.Core.Models.Vector3;
 using VehicleClass = IgiCore.Vehicles.Shared.Models.VehicleClass;
 using VehicleColor = IgiCore.Vehicles.Shared.Models.VehicleColor;
 using VehicleDoor = IgiCore.Vehicles.Shared.Models.VehicleDoor;
@@ -105,6 +106,8 @@ namespace IgiCore.Vehicles.Client.Extensions
 				Handle = vehicle.Handle,
 				Position = vehicle.Position.ToPosition(),
 				Heading = vehicle.Heading,
+				Rotation = new Vector3(vehicle.Rotation.X, vehicle.Rotation.Y, vehicle.Rotation.Z),
+				SteeringAngle = vehicle.SteeringAngle,
 				BodyHealth = vehicle.BodyHealth,
 				EngineHealth = vehicle.EngineHealth,
 				DirtLevel = vehicle.DirtLevel,

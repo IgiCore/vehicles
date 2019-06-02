@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using IgiCore.Tracking.Shared.Models;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Audio;
 
@@ -17,6 +16,8 @@ namespace IgiCore.Vehicles.Shared.Models
 		long Hash { get; set; }
 	    Position Position { get; set; }
 	    float Heading { get; set; }
+	    Vector3 Rotation { get; set; }
+	    float SteeringAngle { get; set; }
 		string VIN { get; set; }
 	    string LicensePlate { get; set; }
 		float BodyHealth { get; set; }
