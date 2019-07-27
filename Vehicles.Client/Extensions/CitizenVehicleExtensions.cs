@@ -104,7 +104,7 @@ namespace IgiCore.Vehicles.Client.Extensions
 			{
 				Hash = vehicle.Model.Hash,
 				Handle = vehicle.Handle,
-				Position = vehicle.Position.ToPosition(),
+				Position = vehicle.Position.ToVector3().ToPosition(),
 				Heading = vehicle.Heading,
 				Rotation = new Vector3(vehicle.Rotation.X, vehicle.Rotation.Y, vehicle.Rotation.Z),
 				SteeringAngle = vehicle.SteeringAngle,

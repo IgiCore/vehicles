@@ -108,7 +108,7 @@ namespace IgiCore.Vehicles.Server
 					.Select(s => new
 					{
 						CharSession = s,
-						Dist = Vector3.Distance(vehicle.Position.ToVector3(), s.Character.Position.ToVector3())
+						Dist = Vector3.Distance(vehicle.Position.ToVector3().ToCitVector3() , s.Character.Position.ToVector3().ToCitVector3())
 					})
 					.OrderBy(c => c.Dist)
 					.FirstOrDefault();
@@ -316,7 +316,7 @@ namespace IgiCore.Vehicles.Server
 				var vehiclesToSpawn = this.ActiveVehicles
 					.Where(v =>
 						v.Handle == null
-						&& Vector3.Distance(v.Position.ToVector3(), e.CharacterSession.Character.Position.ToVector3()) <
+						&& Vector3.Distance(v.Position.ToVector3().ToCitVector3(), e.CharacterSession.Character.Position.ToVector3().ToCitVector3()) <
 						this.Configuration.DespawnDistance
 					);
 
@@ -344,7 +344,7 @@ namespace IgiCore.Vehicles.Server
 						.Select(s => new
 						{
 							Char = s.Character,
-							Dist = Vector3.Distance(vehicle.Position.ToVector3(), s.Character.Position.ToVector3())
+							Dist = Vector3.Distance(vehicle.Position.ToVector3().ToCitVector3(), s.Character.Position.ToVector3().ToCitVector3())
 						})
 						.Where(c => c.Dist < this.Configuration.DespawnDistance)
 						.OrderBy(c => c.Dist)
@@ -375,7 +375,7 @@ namespace IgiCore.Vehicles.Server
 					.Select(s => new
 					{
 						CharSession = s,
-						Dist = Vector3.Distance(vehicle.Position.ToVector3(), s.Character.Position.ToVector3())
+						Dist = Vector3.Distance(vehicle.Position.ToVector3().ToCitVector3(), s.Character.Position.ToVector3().ToCitVector3())
 					})
 					.OrderBy(c => c.Dist)
 					.FirstOrDefault();

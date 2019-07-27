@@ -57,7 +57,7 @@ namespace IgiCore.Vehicles.Client
 				var carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Vehicle>();
 
 				carToSpawn.Hash = (uint) VehicleHash.Elegy;
-				carToSpawn.Position = Game.PlayerPed.Position.ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f);
+				carToSpawn.Position = Game.PlayerPed.Position.ToVector3().ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f);
 				carToSpawn.PrimaryColor = new Shared.Models.VehicleColor
 				{
 					StockColor = VehicleStockColor.HotPink,

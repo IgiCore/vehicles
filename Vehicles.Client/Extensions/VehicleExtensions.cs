@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using CitizenFX.Core;
 using CitizenFX.Core.Native;
@@ -26,7 +26,7 @@ namespace IgiCore.Vehicles.Client.Extensions
 
 		public static async Task<CitizenFX.Core.Vehicle> ToCitizenVehicle(this Vehicle vehicle)
 		{
-			var citizenVehicle = await World.CreateVehicle(new Model((int)vehicle.Hash), vehicle.Position.ToVector3(), vehicle.Heading);
+			var citizenVehicle = await World.CreateVehicle(new Model((int)vehicle.Hash), vehicle.Position.ToVector3().ToCitVector3(), vehicle.Heading);
 			if (!API.DoesEntityExist(citizenVehicle.Handle))
 			{
 				throw new Exception("Failed to create vehicle in game world.");
