@@ -9,14 +9,15 @@ using IgiCore.Vehicles.Shared;
 using IgiCore.Vehicles.Shared.Models;
 using JetBrains.Annotations;
 using NFive.SDK.Client.Commands;
+using NFive.SDK.Client.Communications;
 using NFive.SDK.Client.Events;
 using NFive.SDK.Client.Extensions;
 using NFive.SDK.Client.Input;
 using NFive.SDK.Client.Interface;
-using NFive.SDK.Client.Rpc;
 using NFive.SDK.Client.Services;
 using NFive.SDK.Core.Diagnostics;
 using NFive.SDK.Core.Extensions;
+using NFive.SDK.Core.Input;
 using NFive.SDK.Core.Models;
 using NFive.SDK.Core.Models.Player;
 using Vehicle = IgiCore.Vehicles.Shared.Models.Vehicle;
@@ -30,32 +31,31 @@ namespace IgiCore.Vehicles.Client
 		private Configuration config;
 		private const int VehicleLoadDistance = 500;
 		public List<TrackedVehicle> Tracked { get; set; } = new List<TrackedVehicle>();
+		public Hotkey DebugHotkey = new Hotkey(InputControl.InteractionMenu);
 
-		public VehiclesService(ILogger logger, ITickManager ticks, IEventManager events, IRpcHandler rpc,
-			ICommandManager commands, OverlayManager overlay, User user) : base(logger, ticks, events, rpc, commands,
-			overlay, user)
-		{
-		}
+		public VehiclesService(ILogger logger, ITickManager ticks, ICommunicationManager comms, ICommandManager commands, IOverlayManager overlay, User user) : base(logger, ticks, comms, commands, overlay, user) { }
 
 		public override async Task Started()
 		{
-			this.config = await this.Rpc.Event(VehicleEvents.GetConfiguration).Request<Configuration>();
+			this.config = await this.Comms.Event(VehicleEvents.GetConfiguration).ToServer().Request<Configuration>();
 
-			this.Rpc.Event(VehicleEvents.Spawn).On<Vehicle>(Spawn);
-			this.Rpc.Event(VehicleEvents.Despawn).On<int>(Despawn);
-			this.Rpc.Event(VehicleEvents.Transfer).On<int, Guid>(Transfer);
-			this.Rpc.Event(VehicleEvents.Claim).On<int, int>(Claim);
+			this.Comms.Event(VehicleEvents.Spawn).FromServer().On<Vehicle>(Spawn);
+			this.Comms.Event(VehicleEvents.Despawn).FromServer().On<int>(Despawn);
+			this.Comms.Event(VehicleEvents.Transfer).FromServer().On<int, Guid>(Transfer);
+			this.Comms.Event(VehicleEvents.Claim).FromServer().On<int, int>(Claim);
 
-			this.Ticks.Attach(OnTick);
-			this.Ticks.Attach(DebugStuff);
+			this.Ticks.On(OnTick);
+			this.Ticks.On(DebugStuff);
+
+			this.Logger.Warn($"Debug hotkey: {this.DebugHotkey.UserKeyboardKeyDisplayName}");
 		}
 
 		public async Task DebugStuff()
 		{
-			if (Input.IsControlJustPressed(Control.InteractionMenu))
+			if (this.DebugHotkey.IsJustPressed())
 			{
-				var carToSpawn = await this.Rpc.Event(VehicleEvents.CreateCar).Request<Vehicle>();
-
+				var carToSpawn = await this.Comms.Event(VehicleEvents.CreateCar).ToServer().Request<Vehicle>();
+				
 				carToSpawn.Hash = (uint) VehicleHash.Elegy;
 				carToSpawn.Position = Game.PlayerPed.Position.ToVector3().ToPosition().InFrontOf(Game.PlayerPed.Heading, 10f);
 				carToSpawn.PrimaryColor = new Shared.Models.VehicleColor
@@ -88,7 +88,7 @@ namespace IgiCore.Vehicles.Client
 			await this.Delay(this.config.AutosaveRate);
 		}
 
-		private async void Spawn<T>(IRpcEvent e, T vehicle) where T : Vehicle
+		private async void Spawn<T>(ICommunicationMessage e, T vehicle) where T : Vehicle
 		{
 			try
 			{
@@ -101,7 +101,7 @@ namespace IgiCore.Vehicles.Client
 				spawnedCar.TrackingUserId = this.User.Id;
 				spawnedCar.NetId = netId;
 
-				this.Rpc.Event(VehicleEvents.SaveCar).Trigger(spawnedCar);
+				this.Comms.Event(VehicleEvents.SaveCar).ToServer().Emit(spawnedCar);
 
 				this.Tracked.Add(new TrackedVehicle
 				{
@@ -117,7 +117,7 @@ namespace IgiCore.Vehicles.Client
 
 		}
 
-		private void Despawn(IRpcEvent e, int vehicleNetId)
+		private void Despawn(ICommunicationMessage e, int vehicleNetId)
 		{
 			if (API.NetworkDoesNetworkIdExist(vehicleNetId))
 			{
@@ -126,16 +126,16 @@ namespace IgiCore.Vehicles.Client
 			}
 
 			this.Tracked.Remove(this.Tracked.FirstOrDefault(v => v.NetId == vehicleNetId));
-			this.Rpc.Event(VehicleEvents.Despawn).Trigger(vehicleNetId);
+			this.Comms.Event(VehicleEvents.Despawn).ToServer().Emit(vehicleNetId);
 		}
 
-		private void Transfer(IRpcEvent e, int vehicleId, Guid transferToUserId)
+		private void Transfer(ICommunicationMessage e, int vehicleId, Guid transferToUserId)
 		{
 			this.Tracked.Remove(this.Tracked.First(v => v.Id == vehicleId));
-			this.Rpc.Event(VehicleEvents.Transfer).Trigger(vehicleId, transferToUserId);
+			this.Comms.Event(VehicleEvents.Transfer).ToServer().Emit(vehicleId, transferToUserId);
 		}
 
-		private void Claim(IRpcEvent e, int vehicleId, int vehicleNetId)
+		private void Claim(ICommunicationMessage e, int vehicleId, int vehicleNetId)
 		{
 			this.Tracked.Add(new TrackedVehicle
 			{
@@ -174,7 +174,7 @@ namespace IgiCore.Vehicles.Client
 						car.TrackingUserId = this.User.Id;
 						car.NetId = netId;
 
-						this.Rpc.Event(VehicleEvents.SaveCar).Trigger(car);
+						this.Comms.Event(VehicleEvents.SaveCar).ToServer().Emit(car);
 						break;
 
 					default:
@@ -183,8 +183,7 @@ namespace IgiCore.Vehicles.Client
 						vehicle.TrackingUserId = this.User.Id;
 						vehicle.NetId = netId;
 
-						this.Rpc.Event($"igicore:vehicles:save:{trackedVehicle.Type.VehicleType().Name}")
-							.Trigger(vehicle);
+						this.Comms.Event($"igicore:vehicles:save:{trackedVehicle.Type.VehicleType().Name}").ToServer().Emit(vehicle);
 						break;
 				}
 			}

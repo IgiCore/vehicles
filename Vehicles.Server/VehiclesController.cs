@@ -12,14 +12,13 @@ using IgiCore.Vehicles.Shared;
 using IgiCore.Vehicles.Shared.Models;
 using JetBrains.Annotations;
 using NFive.SDK.Core.Diagnostics;
+using NFive.SDK.Core.Extensions;
 using NFive.SDK.Core.Models;
-using NFive.SDK.Server;
+using NFive.SDK.Core.Models.Player;
+using NFive.SDK.Server.Communications;
 using NFive.SDK.Server.Controllers;
 using NFive.SDK.Server.Events;
 using NFive.SDK.Server.Extensions;
-using NFive.SDK.Server.Rcon;
-using NFive.SDK.Server.Rpc;
-using NFive.SDK.Server.Wrappers;
 using Z.EntityFramework.Plus;
 using Vector3 = CitizenFX.Core.Vector3;
 
@@ -30,7 +29,7 @@ namespace IgiCore.Vehicles.Server
 	{
 		private static readonly object SpawnLock = new object();
 		private readonly CharacterManager characterManager;
-		private readonly SessionManager sessionManager;
+		private readonly ICommunicationManager comms;
 		private readonly IClientList clientList;
 
 		[SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
@@ -52,12 +51,11 @@ namespace IgiCore.Vehicles.Server
 			}
 		}
 
-		public VehiclesController(ILogger logger, IEventManager events, IRpcHandler rpc, IRconManager rcon,
-			Configuration configuration, IClientList clientList) : base(logger, events, rpc, rcon, configuration)
+		public VehiclesController(ILogger logger, Configuration configuration, ICommunicationManager comms, IClientList clientList, CharacterManager characterManager) : base(logger, configuration)
 		{
+			this.comms = comms;
 			this.clientList = clientList;
-			this.characterManager = new CharacterManager(this.Events, this.Rpc);
-			this.sessionManager = new SessionManager(this.Events, this.Rpc);
+			this.characterManager = characterManager;
 		}
 
 		public override Task Started()
@@ -65,13 +63,15 @@ namespace IgiCore.Vehicles.Server
 			this.Cleanup();
 
 			// Attach event handlers.
-			this.Rpc.Event(VehicleEvents.GetConfiguration).On(e => e.Reply(this.Configuration));
-			this.Rpc.Event(VehicleEvents.CreateCar).On(Create);
-			this.Rpc.Event(VehicleEvents.SaveCar).On<Car>(Save);
-			this.Rpc.Event(VehicleEvents.Despawn).On<int>(Destroy);
-			this.Rpc.Event(VehicleEvents.Transfer).On<int, Guid>(Transfer);
+			this.comms.Event(VehicleEvents.GetConfiguration).FromClients().OnRequest(e => e.Reply(this.Configuration));
+			this.comms.Event(VehicleEvents.CreateCar).FromClients().OnRequest(Create);
+			this.comms.Event(VehicleEvents.SaveCar).FromClients().OnRequest<Car>(Save);
+			this.comms.Event(VehicleEvents.Despawn).FromClients().OnRequest<int>(Destroy);
+			this.comms.Event(VehicleEvents.Transfer).FromClients().OnRequest<int, Guid>(Transfer);
+
+			this.comms.Event(SessionEvents.ClientDisconnected).FromServer().On<IClient, Session>(OnClientDisconnected);
+
 			this.characterManager.Selected += (r, e) => SpawnForPlayer(e);
-			this.sessionManager.ClientDisconnected += (r, e) => OnClientDisconnect(e);
 
 			// Start vehicle spawning thread.
 			Task.Factory.StartNew(async () =>
@@ -97,14 +97,14 @@ namespace IgiCore.Vehicles.Server
 			return base.Started();
 		}
 
-		protected void OnClientDisconnect(ClientSessionEventArgs e)
+		private async void OnClientDisconnected(ICommunicationMessage e, IClient client, Session session)
 		{
-			var characterSessions = this.characterManager.ActiveCharacterSessions;
+			var characterSessions = await this.characterManager.ActiveCharacterSessions();
 
 			foreach (var vehicle in this.ActiveVehicles.Where(v => v.Handle != null).ToList())
 			{
 				var nearestCharacter = characterSessions
-					.Where(c => c.IsConnected && c.SessionId != e.Session.Id)
+					.Where(c => c.IsConnected && c.SessionId != session.Id)
 					.Select(s => new
 					{
 						CharSession = s,
@@ -149,7 +149,7 @@ namespace IgiCore.Vehicles.Server
 			}
 		}
 
-		protected async void Create(IRpcEvent e)
+		protected async void Create(ICommunicationMessage e)
 		{
 			using (var context = new StorageContext())
 			using (var transaction = context.Database.BeginTransaction())
@@ -175,7 +175,7 @@ namespace IgiCore.Vehicles.Server
 			}
 		}
 
-		protected async void Save<T>(IRpcEvent e, T vehicle) where T : Vehicle
+		protected async void Save<T>(ICommunicationMessage e, T vehicle) where T : Vehicle
 		{
 			using (var context = new StorageContext())
 			using (var transaction = context.Database.BeginTransaction())
@@ -290,7 +290,7 @@ namespace IgiCore.Vehicles.Server
 			}
 		}
 
-		protected async void Destroy(IRpcEvent e, int netId)
+		protected async void Destroy(ICommunicationMessage e, int netId)
 		{
 			using (var context = new StorageContext())
 			using (var transaction = context.Database.BeginTransaction())
@@ -323,20 +323,17 @@ namespace IgiCore.Vehicles.Server
 				foreach (var vehicle in vehiclesToSpawn)
 				{
 					// TODO: Await client response to prevent races.
-					this.Rpc.Event(VehicleEvents.Spawn)
-						.Target(this.clientList.Clients.First(c => c.Handle == e.CharacterSession.Session.Handle))
-						.Trigger(vehicle);
+					this.comms.Event(VehicleEvents.Spawn).ToClient(this.clientList.Clients.First(c => c.Handle == e.CharacterSession.Session.Handle)).Emit(vehicle);
 				}
 			}
 		}
 
-		protected void Spawn()
+		protected async void Spawn()
 		{
+			var characterSessions = await this.characterManager.ActiveCharacterSessions();
 			lock (SpawnLock)
 			{
 				var vehiclesToSpawn = this.ActiveVehicles.Where(v => v.Handle == null);
-				var characterSessions = this.characterManager.ActiveCharacterSessions;
-
 				foreach (var vehicle in vehiclesToSpawn)
 				{
 					var characterToSpawn = characterSessions
@@ -355,18 +352,16 @@ namespace IgiCore.Vehicles.Server
 					if (characterSession == null) continue;
 
 					// TODO: Await client response to prevent races.
-					this.Rpc.Event(VehicleEvents.Spawn)
-						.Target(this.clientList.Clients.First(c => c.Handle == characterSession.Session.Handle))
-						.Trigger(vehicle);
+					this.comms.Event(VehicleEvents.Spawn).ToClient(this.clientList.Clients.First(c => c.Handle == characterSession.Session.Handle)).Emit(vehicle);
 				}
 			}
 		}
 
-		protected void Update()
+		protected async void Update()
 		{
 			var activeVehicles = this.ActiveVehicles.Where(v => v.Handle != null).ToList();
 
-			var characterSessions = this.characterManager.ActiveCharacterSessions;
+			var characterSessions = await this.characterManager.ActiveCharacterSessions();
 
 			foreach (var vehicle in activeVehicles)
 			{
@@ -390,22 +385,18 @@ namespace IgiCore.Vehicles.Server
 						characterSessions.FirstOrDefault(s => s.Session.UserId == vehicle.TrackingUserId);
 					if (trackingUser == null) continue;
 
-					this.Rpc.Event(VehicleEvents.Transfer)
-						.Target(this.clientList.Clients.First(c => c.Handle == trackingUser.Session.Handle))
-						.Trigger(vehicle.Id, nearestCharacter.CharSession.Session.UserId);
+					this.comms.Event(VehicleEvents.Transfer).ToClient(this.clientList.Clients.First(c => c.Handle == trackingUser.Session.Handle)).Emit(vehicle.Id, nearestCharacter.CharSession.Session.UserId);
 				}
 			}
 		}
 
-		protected void Transfer(IRpcEvent e, int vehicleId, Guid transferToUserId)
+		protected async void Transfer(ICommunicationMessage e, int vehicleId, Guid transferToUserId)
 		{
-			var transferToHandle = this.characterManager.ActiveCharacterSessions.First(c => c.Session.UserId == transferToUserId).Session.Handle;
+			var transferToHandle = (await this.characterManager.ActiveCharacterSessions()).First(c => c.Session.UserId == transferToUserId).Session.Handle;
 			var transferToClient = this.clientList.Clients.First(c => c.Handle == transferToHandle);
 			var transferVehicle = this.ActiveVehicles.First(v => v.Id == vehicleId);
 
-			this.Rpc.Event(VehicleEvents.Claim)
-				.Target(transferToClient)
-				.Trigger(vehicleId, transferVehicle.NetId);
+			this.comms.Event(VehicleEvents.Claim).ToClient(transferToClient).Emit(vehicleId, transferVehicle.NetId);
 
 			using (var context = new StorageContext())
 			using (var transaction = context.Database.BeginTransaction())
@@ -418,7 +409,7 @@ namespace IgiCore.Vehicles.Server
 
 		protected void Despawn(int vehicleNetId, int playerHandle)
 		{
-			this.Rpc.Event(VehicleEvents.Despawn).Target(this.clientList.Clients.First(c => c.Handle == playerHandle)).Trigger(vehicleNetId);
+			this.comms.Event(VehicleEvents.Despawn).ToClient(this.clientList.Clients.First(c => c.Handle == playerHandle)).Emit(vehicleNetId);
 		}
 	}
 }

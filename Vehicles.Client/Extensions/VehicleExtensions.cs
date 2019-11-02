@@ -4,6 +4,7 @@ using CitizenFX.Core;
 using CitizenFX.Core.Native;
 using IgiCore.Vehicles.Shared.Models;
 using NFive.SDK.Client.Extensions;
+using NFive.SDK.Core.Extensions;
 using Vehicle = IgiCore.Vehicles.Shared.Models.Vehicle;
 
 namespace IgiCore.Vehicles.Client.Extensions
