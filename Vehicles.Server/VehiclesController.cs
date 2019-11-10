@@ -186,7 +186,7 @@ namespace IgiCore.Vehicles.Server
 					.Include(v => v.Doors)
 					.Include(v => v.Windows)
 					.Include(v => v.Seats)
-					.Include(v => v.Mods)
+					//.Include(v => v.Mods)
 					.FirstOrDefault(c => c.Id == vehicle.Id);
 
 				if (dbVeh == null ||
