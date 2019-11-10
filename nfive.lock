@@ -1,9 +1,35 @@
 plugins:
-- name: IgiCore/characters
+- &o0
+  dependency_nodes: 
+  name: IgiCore/inventory
+  version: 0.1.0
+  description: NFive Plugin
+  author: IgiCore
+  license: LGPL-3.0-or-later
+  website: 
+  server:
+    main:
+    - IgiCore.Inventory.Server
+    include:
+    - IgiCore.Inventory.Shared
+  client:
+    main:
+    - IgiCore.Inventory.Client
+    include:
+    - IgiCore.Inventory.Shared
+    files: 
+    overlays: 
+    loading_screen: 
+  dependencies: 
+  repositories: 
+- dependency_nodes:
+  - *o0
+  name: IgiCore/characters
   version: 1.0.0
   description: NFive Plugin
   author: IgiCore
   license: LGPL
+  website: 
   server:
     main:
     - IgiCore.Characters.Server
@@ -22,14 +48,32 @@ plugins:
     - Overlays/main.js
     - Overlays/pricedown.woff2
     - Overlays/style.css
-- name: IgiCore/tracking
+    overlays: 
+    loading_screen: 
+  dependencies:
+    IgiCore/inventory: ^0.1.0
+  repositories:
+  - name: IgiCore/inventory
+    type: local
+    path: G:\Workspace\plugins\IgiCore\inventory
+    url: 
+- dependency_nodes: 
+  name: IgiCore/tracking
   version: 1.0.0
   description: IgiCore object tracking lib
   author: IgiCore
   license: LGPL
+  website: 
   server:
+    main: 
     include:
     - IgiCore.Tracking.Shared
   client:
+    main: 
     include:
     - IgiCore.Tracking.Shared
+    files: 
+    overlays: 
+    loading_screen: 
+  dependencies: 
+  repositories: 

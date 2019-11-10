@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CitizenFX.Core;
+using CitizenFX.Core.Native;
 using IgiCore.Vehicles.Shared.Models;
 using NFive.SDK.Client.Extensions;
+using NFive.SDK.Core.Extensions;
 using Vector3 = NFive.SDK.Core.Models.Vector3;
 using VehicleClass = IgiCore.Vehicles.Shared.Models.VehicleClass;
 using VehicleColor = IgiCore.Vehicles.Shared.Models.VehicleColor;
@@ -78,7 +81,7 @@ namespace IgiCore.Vehicles.Client.Extensions
 
 			// Seats
 			// TODO: Store player server IDs when communicating with the server and have the server assign a character
-			var players = new PlayerList();
+			var players = ((List<object>)API.GetActivePlayers()).Cast<byte>().Select(p => new Player(p)).ToList();
 			var vehicleSeats = new List<VehicleSeat>();
 			foreach (var vehicleOccupant in vehicle.Occupants)
 			{
@@ -104,7 +107,7 @@ namespace IgiCore.Vehicles.Client.Extensions
 			{
 				Hash = vehicle.Model.Hash,
 				Handle = vehicle.Handle,
-				Position = vehicle.Position.ToPosition(),
+				Position = vehicle.Position.ToVector3().ToPosition(),
 				Heading = vehicle.Heading,
 				Rotation = new Vector3(vehicle.Rotation.X, vehicle.Rotation.Y, vehicle.Rotation.Z),
 				SteeringAngle = vehicle.SteeringAngle,

@@ -1,8 +1,10 @@
+dependency_nodes: 
 name: IgiCore/vehicles
 version: 1.0.0
 description: NFive Plugin
 author: IgiCore
 license: LGPL
+website: 
 server:
   main:
   - IgiCore.Vehicles.Server
@@ -13,13 +15,23 @@ client:
   - IgiCore.Vehicles.Client
   include:
   - IgiCore.Vehicles.Shared
+  files: 
+  overlays: 
+  loading_screen: 
 dependencies:
   IgiCore/characters: ^1.0.0
   IgiCore/tracking: ^1.0.0
+  IgiCore/inventory: ^0.1.0
 repositories:
 - name: IgiCore/tracking
   type: local
   path: G:\Workspace\plugins\IgiCore\tracking
+  url: 
 - name: IgiCore/characters
   type: local
   path: G:\Workspace\plugins\IgiCore\characters
+  url: 
+- name: IgiCore/inventory
+  type: local
+  path: G:\Workspace\plugins\IgiCore\inventory
+  url: 
